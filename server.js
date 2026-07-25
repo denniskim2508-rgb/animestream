@@ -267,7 +267,7 @@ process.on('unhandledRejection', (err) => {
   console.error('[FATAL] Unhandled rejection:', err?.message || err)
 })
 
-const PORT = process.env.ANIWATCH_PORT || 3001
+const PORT = process.env.PORT || process.env.ANIWATCH_PORT || 3001
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`)
 })

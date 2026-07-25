@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: animestream
+    runtime: node
+    plan: free
+    buildCommand: npm install && npm run build
+    startCommand: node server.js
+    envVars:
+      - key: NODE_ENV
+        value: production
