@@ -16,7 +16,7 @@ export default function Login() {
     setError('')
     try {
       await login(email, password)
-      navigate('/')
+      navigate('/home')
     } catch (err) {
       if (err.code === 'auth/user-not-found') setError('No account found with this email')
       else if (err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') setError('Incorrect email or password')
@@ -34,7 +34,7 @@ export default function Login() {
 
       <div className="relative w-full max-w-md">
         <div className="text-center mb-8">
-          <Link to="/" className="inline-flex items-center gap-2 mb-6">
+          <Link to="/home" className="inline-flex items-center gap-2 mb-6">
             <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center">
               <Film className="w-7 h-7 text-white" />
             </div>

@@ -32,7 +32,7 @@ export default function Notifications() {
     <div className="min-h-screen bg-gray-950 pt-24 pb-16 px-4 sm:px-6 lg:px-8 max-w-[900px] mx-auto">
       <div className="flex items-center gap-3 mb-6">
         <Link
-          to="/"
+          to="/home"
           className="p-2 rounded-full bg-white/10 hover:bg-white/20 transition-colors"
         >
           <ArrowLeft className="w-5 h-5 text-white" />

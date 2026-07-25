@@ -48,6 +48,14 @@ export default function App() {
         path="/"
         element={
           <Layout>
+            <About />
+          </Layout>
+        }
+      />
+      <Route
+        path="/home"
+        element={
+          <Layout>
             <Home />
           </Layout>
         }

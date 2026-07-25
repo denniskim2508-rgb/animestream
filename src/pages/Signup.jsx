@@ -19,7 +19,7 @@ export default function Signup() {
     setError('')
     try {
       await signup(name, email, password)
-      navigate('/')
+      navigate('/home')
     } catch (err) {
       if (err.code === 'auth/email-already-in-use') setError('An account with this email already exists')
       else if (err.code === 'auth/weak-password') setError('Password must be at least 6 characters')
@@ -37,7 +37,7 @@ export default function Signup() {
 
       <div className="relative w-full max-w-md">
         <div className="text-center mb-8">
-          <Link to="/" className="inline-flex items-center gap-2 mb-6">
+          <Link to="/home" className="inline-flex items-center gap-2 mb-6">
             <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center">
               <Film className="w-7 h-7 text-white" />
             </div>

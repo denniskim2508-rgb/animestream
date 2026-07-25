@@ -20,7 +20,7 @@ export default function About() {
             From timeless classics to the latest episodes, we've got it all in one clean, fast, ad-light place — built by fans who actually watch this stuff.
           </p>
           <Link
-            to="/"
+            to="/home"
             className="inline-flex items-center gap-2.5 px-7 py-3.5 bg-gradient-to-r from-primary to-purple-700 rounded-full font-semibold text-white hover:brightness-110 transition"
           >
             Explore Anime <ArrowRight className="w-4 h-4" />

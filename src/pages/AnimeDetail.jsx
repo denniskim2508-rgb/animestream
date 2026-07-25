@@ -54,7 +54,7 @@ export default function AnimeDetail() {
         <div className="text-center">
           <h1 className="text-2xl font-bold text-white mb-2">Anime Not Found</h1>
           <p className="text-gray-400 mb-4">{error || 'This anime could not be loaded'}</p>
-          <Link to="/" className="text-primary-light hover:underline">Go Home</Link>
+          <Link to="/home" className="text-primary-light hover:underline">Go Home</Link>
         </div>
       </div>
     )

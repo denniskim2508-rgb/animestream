@@ -5,7 +5,7 @@ import { useAuth } from '../../context/AuthContext'
 
 const navLinks = [
   { path: '/about', label: 'About' },
-  { path: '/', label: 'Home' },
+  { path: '/home', label: 'Home' },
   { path: '/browse', label: 'Browse' },
   { path: '/genres', label: 'Genres' },
 ]
@@ -59,7 +59,7 @@ export default function Navbar() {
       <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           <div className="flex items-center gap-8">
-            <Link to="/" className="flex items-center gap-2 shrink-0">
+            <Link to="/home" className="flex items-center gap-2 shrink-0">
               <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-primary to-accent flex items-center justify-center">
                 <Film className="w-5 h-5 text-white" />
               </div>
@@ -224,7 +224,7 @@ export default function Navbar() {
                           Settings
                         </Link>
                         <button
-                          onClick={() => { logout(); navigate('/') }}
+                           onClick={() => { logout(); navigate('/home') }}
                           className="flex items-center gap-3 w-full h-12 px-4 text-[13px] font-medium text-[#EF4444] hover:bg-[rgba(239,68,68,0.12)] transition-colors duration-200"
                         >
                           <LogOut className="w-[18px] h-[18px]" />
