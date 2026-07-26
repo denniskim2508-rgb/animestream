@@ -1,9 +1,14 @@
 import { useState, useEffect } from 'react'
 import { collection, addDoc, query, orderBy, onSnapshot, serverTimestamp } from 'firebase/firestore'
 import { db } from '../firebase'
+import { useAuth } from '../context/AuthContext'
 import { MessageCircle, Send, Loader2 } from 'lucide-react'
+import { Link } from 'react-router-dom'
+
+const PLACEHOLDER_AVATAR = 'https://ui-avatars.com/api/?name=User&background=6d28d9&color=fff&size=96'
 
 export default function CommentSection({ animeId, episode }) {
+  const { user } = useAuth()
   const [comments, setComments] = useState([])
   const [loading, setLoading] = useState(true)
   const [name, setName] = useState(() => localStorage.getItem('comment_name') || '')
@@ -26,18 +31,22 @@ export default function CommentSection({ animeId, episode }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    const trimmedName = name.trim()
     const trimmedText = text.trim()
-    if (!trimmedName || !trimmedText || trimmedText.length < 2 || trimmedText.length > 500) return
+    if (!trimmedText || trimmedText.length < 2 || trimmedText.length > 500) return
+
+    const displayName = user?.name || name.trim()
+    if (!displayName) return
 
     setSending(true)
     try {
       await addDoc(messagesRef, {
-        name: trimmedName.slice(0, 30),
+        name: displayName.slice(0, 30),
+        avatar: user?.avatar || '',
+        uid: user?.uid || '',
         text: trimmedText,
         createdAt: serverTimestamp(),
       })
-      localStorage.setItem('comment_name', trimmedName)
+      if (!user) localStorage.setItem('comment_name', displayName)
       setText('')
     } catch {
       // silent fail
@@ -56,7 +65,8 @@ export default function CommentSection({ animeId, episode }) {
     const diffHr = Math.floor(diffMin / 60)
     if (diffHr < 24) return `${diffHr}h ago`
     const diffDay = Math.floor(diffHr / 24)
-    return `${diffDay}d ago`
+    if (diffDay < 30) return `${diffDay}d ago`
+    return d.toLocaleDateString()
   }
 
   return (
@@ -69,14 +79,21 @@ export default function CommentSection({ animeId, episode }) {
       </div>
 
       <form onSubmit={handleSubmit} className="mb-6 flex flex-col gap-3">
-        <input
-          type="text"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder="Your name"
-          maxLength={30}
-          className="w-full sm:w-64 px-4 py-2.5 bg-white/5 border border-white/10 rounded-lg text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary/50"
-        />
+        {!user && (
+          <input
+            type="text"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="Your name"
+            maxLength={30}
+            className="w-full sm:w-64 px-4 py-2.5 bg-white/5 border border-white/10 rounded-lg text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary/50"
+          />
+        )}
+        {user && (
+          <div className="flex items-center gap-2 text-sm text-gray-400">
+            Commenting as <span className="text-white font-medium">{user.name}</span>
+          </div>
+        )}
         <div className="flex gap-2">
           <input
             type="text"
@@ -88,7 +105,7 @@ export default function CommentSection({ animeId, episode }) {
           />
           <button
             type="submit"
-            disabled={sending || !name.trim() || text.trim().length < 2}
+            disabled={sending || text.trim().length < 2 || (!user && !name.trim())}
             className="px-4 py-2.5 bg-primary hover:bg-primary-dark disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-lg transition-colors flex items-center gap-2"
           >
             {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
@@ -104,17 +121,35 @@ export default function CommentSection({ animeId, episode }) {
       ) : comments.length === 0 ? (
         <p className="text-gray-500 text-sm text-center py-8">No comments yet. Be the first!</p>
       ) : (
-        <div className="space-y-3">
+        <div className="space-y-4">
           {comments.map((c) => (
-            <div key={c.id} className="bg-white/5 border border-white/5 rounded-xl px-4 py-3">
-              <div className="flex items-center gap-2 mb-1.5">
-                <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center">
-                  <span className="text-[10px] font-bold text-primary-light">{c.name?.[0]?.toUpperCase()}</span>
+            <div key={c.id} className="bg-white/5 border border-white/5 rounded-xl px-4 py-3.5">
+              <div className="flex items-start gap-3">
+                {c.uid ? (
+                  <Link to="/profile" className="shrink-0">
+                    <img
+                      src={c.avatar || PLACEHOLDER_AVATAR}
+                      alt={c.name}
+                      onError={(e) => { e.target.src = PLACEHOLDER_AVATAR }}
+                      className="w-10 h-10 rounded-full border border-white/10 shadow-md object-cover hover:ring-2 hover:ring-primary/50 transition-all"
+                    />
+                  </Link>
+                ) : (
+                  <img
+                    src={c.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(c.name || 'U')}&background=6d28d9&color=fff&size=96`}
+                    alt={c.name}
+                    onError={(e) => { e.target.src = PLACEHOLDER_AVATAR }}
+                    className="w-10 h-10 rounded-full border border-white/10 shadow-md object-cover"
+                  />
+                )}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-sm font-semibold text-white">{c.name}</span>
+                    <span className="text-[11px] text-gray-600">{formatTime(c.createdAt)}</span>
+                  </div>
+                  <p className="text-sm text-gray-300 leading-relaxed">{c.text}</p>
                 </div>
-                <span className="text-sm font-semibold text-white">{c.name}</span>
-                <span className="text-[11px] text-gray-600">{formatTime(c.createdAt)}</span>
               </div>
-              <p className="text-sm text-gray-300 leading-relaxed">{c.text}</p>
             </div>
           ))}
         </div>
