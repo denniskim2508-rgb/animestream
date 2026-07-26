@@ -89,27 +89,35 @@ export default function CommentSection({ animeId, episode }) {
             className="w-full sm:w-64 px-4 py-2.5 bg-white/5 border border-white/10 rounded-lg text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary/50"
           />
         )}
-        {user && (
-          <div className="flex items-center gap-2 text-sm text-gray-400">
-            Commenting as <span className="text-white font-medium">{user.name}</span>
+        <div className="flex gap-3 items-start">
+          {user && (
+            <img
+              src={user.avatar || PLACEHOLDER_AVATAR}
+              alt={user.name}
+              onError={(e) => { e.target.src = PLACEHOLDER_AVATAR }}
+              className="w-9 h-9 rounded-full border border-white/10 shadow-md object-cover shrink-0 mt-0.5"
+            />
+          )}
+          <div className="flex-1 flex flex-col gap-2">
+            {user && <span className="text-sm font-medium text-white">{user.name}</span>}
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={text}
+                onChange={(e) => setText(e.target.value)}
+                placeholder="Write a comment..."
+                maxLength={500}
+                className="flex-1 px-4 py-2.5 bg-white/5 border border-white/10 rounded-lg text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary/50"
+              />
+              <button
+                type="submit"
+                disabled={sending || text.trim().length < 2 || (!user && !name.trim())}
+                className="px-4 py-2.5 bg-primary hover:bg-primary-dark disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-lg transition-colors flex items-center gap-2"
+              >
+                {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+              </button>
+            </div>
           </div>
-        )}
-        <div className="flex gap-2">
-          <input
-            type="text"
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            placeholder="Write a comment..."
-            maxLength={500}
-            className="flex-1 px-4 py-2.5 bg-white/5 border border-white/10 rounded-lg text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary/50"
-          />
-          <button
-            type="submit"
-            disabled={sending || text.trim().length < 2 || (!user && !name.trim())}
-            className="px-4 py-2.5 bg-primary hover:bg-primary-dark disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-lg transition-colors flex items-center gap-2"
-          >
-            {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-          </button>
         </div>
         <p className="text-[11px] text-gray-600">{text.length}/500</p>
       </form>
