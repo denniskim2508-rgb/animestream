@@ -473,7 +473,7 @@ export default function VideoPlayer() {
                           className="flex items-center gap-1.5 px-4 py-1.5 bg-white/10 hover:bg-white/20 border border-white/20 hover:border-white/40 text-white text-xs font-semibold rounded-md transition-all duration-200 backdrop-blur-sm"
                         >
                           Skip Outro
-                          <SkipForward className="w-3.5 h-3.5" />
+                          <SkipForward className="w-3.5 h-3.5" style={{ transform: 'scaleX(-1)' }} />
                         </button>
                       )}
                     </div>
@@ -490,7 +490,7 @@ export default function VideoPlayer() {
                     </button>
                     <button onClick={() => seek(10)} className="p-1 text-white/60 hover:text-white transition-colors" title="Forward 10s (→)">
                       <div className="relative">
-                        <SkipForward className="w-4 h-4" />
+                        <RotateCcw className="w-4 h-4" style={{ transform: 'scaleX(-1)' }} />
                         <span className="absolute inset-0 flex items-center justify-center text-[7px] font-bold text-white/80">10</span>
                       </div>
                     </button>
