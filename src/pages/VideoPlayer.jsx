@@ -1,7 +1,7 @@
 import { useParams, Link, useSearchParams, useNavigate } from 'react-router-dom'
 import { useState, useEffect, useRef, useCallback } from 'react'
 import Hls from 'hls.js'
-import { ChevronLeft, Play, Pause, List, SkipForward, SkipBack, AlertCircle, Loader2, RefreshCw, Tv, Volume2, VolumeX, RotateCcw, Maximize, Minimize } from 'lucide-react'
+import { ChevronLeft, Play, Pause, List, SkipForward, SkipBack, AlertCircle, Loader2, RefreshCw, Tv, Volume2, VolumeX, RotateCcw, Maximize, Minimize, Search } from 'lucide-react'
 import { fetchMediaById } from '../api/anilist'
 import { resolveStream, getServers, getSources } from '../api/anikoto'
 import { useAuth } from '../context/AuthContext'
@@ -53,7 +53,9 @@ export default function VideoPlayer() {
   const [showVolume, setShowVolume] = useState(false)
   const [introSkipped, setIntroSkipped] = useState(false)
   const [outroSkipped, setOutroSkipped] = useState(false)
+  const [episodeSearch, setEpisodeSearch] = useState('')
   const containerRef = useRef(null)
+  const episodeSearchRef = useRef(null)
   const controlsTimeoutRef = useRef(null)
 
   const hasNextEpisode = totalEpisodes > 0 && currentEp < totalEpisodes
@@ -61,6 +63,13 @@ export default function VideoPlayer() {
   useEffect(() => {
     cwRef.current = user?.continueWatching || []
   }, [user?.continueWatching])
+
+  useEffect(() => {
+    if (showEpisodeList && episodeSearchRef.current) {
+      setTimeout(() => episodeSearchRef.current?.focus(), 100)
+    }
+    if (!showEpisodeList) setEpisodeSearch('')
+  }, [showEpisodeList])
 
   useEffect(() => {
     if (!videoRef.current || !streamData?.url) return
@@ -670,29 +679,57 @@ export default function VideoPlayer() {
           </div>
 
           {showEpisodeList && (
-            <div className="mt-4 max-h-[50vh] overflow-y-auto rounded-xl border border-white/10 bg-gray-900/50">
-              <div className="p-3 border-b border-white/10 flex items-center justify-between">
-                <h3 className="font-semibold text-white text-sm">Episodes</h3>
-                <button onClick={() => setShowEpisodeList(false)} className="text-gray-400 hover:text-white text-sm">&#x2715;</button>
+            <div className="mt-4 max-h-[50vh] rounded-xl border border-white/10 bg-gray-900/50 flex flex-col">
+              <div className="p-3 border-b border-white/10 flex items-center gap-3 shrink-0">
+                <h3 className="font-semibold text-white text-sm whitespace-nowrap">Episodes</h3>
+                <div className="relative flex-1 min-w-0">
+                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-500 pointer-events-none" />
+                  <input
+                    ref={episodeSearchRef}
+                    type="text"
+                    value={episodeSearch}
+                    onChange={(e) => setEpisodeSearch(e.target.value)}
+                    placeholder="Search episodes..."
+                    className="w-full pl-8 pr-3 py-1.5 bg-white/5 border border-white/10 rounded-lg text-sm text-white placeholder-gray-500 outline-none focus:border-primary/50 focus:bg-white/[0.07] transition-all"
+                  />
+                </div>
+                <button onClick={() => setShowEpisodeList(false)} className="text-gray-400 hover:text-white text-sm shrink-0 p-1">
+                  &#x2715;
+                </button>
               </div>
-              {totalEpisodes > 0 ? (
-                Array.from({ length: totalEpisodes }, (_, i) => i + 1).map((ep) => (
-                  <Link
-                    key={ep}
-                    to={`/watch/${animeId}/${ep}?total=${totalEpisodes}&audio=${audioMode}`}
-                    className={`flex items-center gap-3 px-4 py-3 border-b border-white/5 transition-colors ${
-                      ep === currentEp ? 'bg-primary/10' : 'hover:bg-white/5'
-                    }`}
-                  >
-                    <span className="text-xs font-mono text-gray-500 w-6 text-right">{ep}</span>
-                    <p className={`text-sm truncate ${ep === currentEp ? 'text-primary-light font-medium' : 'text-gray-300'}`}>
-                      Episode {ep}
-                    </p>
-                  </Link>
-                ))
-              ) : (
-                <p className="text-gray-500 text-sm p-4 text-center">No episodes</p>
-              )}
+              <div className="overflow-y-auto flex-1 min-h-0">
+                {totalEpisodes > 0 ? (() => {
+                  const allEps = Array.from({ length: totalEpisodes }, (_, i) => i + 1)
+                  const q = episodeSearch.trim().toLowerCase()
+                  const filtered = q
+                    ? allEps.filter(ep => String(ep).includes(q) || `episode ${ep}`.includes(q))
+                    : allEps
+                  if (filtered.length === 0) {
+                    return <p className="text-gray-500 text-sm p-6 text-center">No episodes found.</p>
+                  }
+                  return filtered.map((ep) => (
+                    <Link
+                      key={ep}
+                      to={`/watch/${animeId}/${ep}?total=${totalEpisodes}&audio=${audioMode}`}
+                      className={`flex items-center gap-3 px-4 py-3 border-b border-white/5 transition-colors ${
+                        ep === currentEp ? 'bg-primary/10' : 'hover:bg-white/5'
+                      }`}
+                    >
+                      <span className="text-xs font-mono text-gray-500 w-6 text-right">{ep}.</span>
+                      <p className={`text-sm truncate flex-1 ${ep === currentEp ? 'text-primary-light font-medium' : 'text-gray-300'}`}>
+                        Episode {ep}
+                      </p>
+                      {ep === currentEp ? (
+                        <Pause className="w-3.5 h-3.5 text-primary-light shrink-0" />
+                      ) : (
+                        <Play className="w-3.5 h-3.5 text-gray-500 shrink-0" />
+                      )}
+                    </Link>
+                  ))
+                })() : (
+                  <p className="text-gray-500 text-sm p-6 text-center">No episodes</p>
+                )}
+              </div>
             </div>
           )}
 
