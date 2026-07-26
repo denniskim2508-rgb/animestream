@@ -51,6 +51,8 @@ export default function VideoPlayer() {
   const [showControls, setShowControls] = useState(true)
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [showVolume, setShowVolume] = useState(false)
+  const [introSkipped, setIntroSkipped] = useState(false)
+  const [outroSkipped, setOutroSkipped] = useState(false)
   const containerRef = useRef(null)
   const controlsTimeoutRef = useRef(null)
 
@@ -261,11 +263,18 @@ export default function VideoPlayer() {
     const chapter = streamData.chapters.find(ch =>
       type === 'intro' ? /intro/i.test(ch.title) : /outro|ed\b|ending/i.test(ch.title)
     )
-    if (chapter) video.currentTime = chapter.end + 0.5
+    if (chapter) {
+      video.currentTime = chapter.end + 0.5
+      if (type === 'intro') setIntroSkipped(true)
+      else setOutroSkipped(true)
+    }
   }
 
   const introChapter = streamData?.chapters?.find(ch => /intro/i.test(ch.title))
   const outroChapter = streamData?.chapters?.find(ch => /outro|ed\b|ending/i.test(ch.title))
+
+  const showIntroSkip = introChapter && !introSkipped && currentTime >= introChapter.start - 2 && currentTime <= introChapter.end + 2
+  const showOutroSkip = outroChapter && !outroSkipped && currentTime >= outroChapter.start - 2 && currentTime <= outroChapter.end + 2
 
   const formatTime = (s) => {
     if (!s || !isFinite(s)) return '0:00'
@@ -339,7 +348,14 @@ export default function VideoPlayer() {
 
     const onPlay = () => setPlaying(true)
     const onPause = () => { setPlaying(false); setShowControls(true) }
-    const onTimeUpdate = () => setCurrentTime(video.currentTime)
+    const onTimeUpdate = () => {
+      setCurrentTime(video.currentTime)
+      if (!streamData?.chapters?.length) return
+      const intro = streamData.chapters.find(ch => /intro/i.test(ch.title))
+      const outro = streamData.chapters.find(ch => /outro|ed\b|ending/i.test(ch.title))
+      if (intro && video.currentTime > intro.end + 0.5) setIntroSkipped(true)
+      if (outro && video.currentTime > outro.end + 0.5) setOutroSkipped(true)
+    }
     const onDurationChange = () => setDuration(video.duration)
     const onLoadedMetadata = () => setDuration(video.duration)
 
@@ -348,6 +364,8 @@ export default function VideoPlayer() {
     video.addEventListener('timeupdate', onTimeUpdate)
     video.addEventListener('durationchange', onDurationChange)
     video.addEventListener('loadedmetadata', onLoadedMetadata)
+    setIntroSkipped(false)
+    setOutroSkipped(false)
     return () => {
       video.removeEventListener('play', onPlay)
       video.removeEventListener('pause', onPause)
@@ -426,7 +444,7 @@ export default function VideoPlayer() {
               >
                 <div className="px-4 pb-3 pt-12 pointer-events-auto">
                   <div
-                    className="w-full h-1.5 bg-white/20 rounded-full cursor-pointer group/seek hover:h-2.5 transition-all mb-2"
+                    className="w-full h-1.5 bg-white/20 rounded-full cursor-pointer group/seek hover:h-2.5 transition-all mb-3"
                     onClick={handleSeek}
                   >
                     <div
@@ -436,18 +454,48 @@ export default function VideoPlayer() {
                       <div className="absolute right-0 top-1/2 -translate-y-1/2 w-3.5 h-3.5 bg-primary rounded-full shadow-md opacity-0 group-hover/seek:opacity-100 transition-opacity" />
                     </div>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <button onClick={togglePlay} className="text-white hover:text-primary transition-colors">
+                  <div className="flex items-center justify-between mb-1 min-h-[2rem]">
+                    <div className="flex items-center gap-2">
+                      {showIntroSkip && (
+                        <button
+                          onClick={() => handleSkipChapter('intro')}
+                          className="flex items-center gap-1.5 px-4 py-1.5 bg-white/10 hover:bg-white/20 border border-white/20 hover:border-white/40 text-white text-xs font-semibold rounded-md transition-all duration-200 backdrop-blur-sm"
+                        >
+                          <SkipForward className="w-3.5 h-3.5" />
+                          Skip Intro
+                        </button>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {showOutroSkip && (
+                        <button
+                          onClick={() => handleSkipChapter('outro')}
+                          className="flex items-center gap-1.5 px-4 py-1.5 bg-white/10 hover:bg-white/20 border border-white/20 hover:border-white/40 text-white text-xs font-semibold rounded-md transition-all duration-200 backdrop-blur-sm"
+                        >
+                          Skip Outro
+                          <SkipForward className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button onClick={togglePlay} className="p-1 text-white hover:text-primary transition-colors">
                       {playing ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5" />}
                     </button>
-                    <button onClick={() => seek(-10)} className="text-white/70 hover:text-white transition-colors" title="Back 10s">
-                      <RotateCcw className="w-4 h-4" />
+                    <button onClick={() => seek(-10)} className="p-1 text-white/60 hover:text-white transition-colors" title="Back 10s (←)">
+                      <div className="relative">
+                        <RotateCcw className="w-4 h-4" />
+                        <span className="absolute inset-0 flex items-center justify-center text-[7px] font-bold text-white/80">10</span>
+                      </div>
                     </button>
-                    <button onClick={() => seek(10)} className="text-white/70 hover:text-white transition-colors" title="Forward 10s">
-                      <SkipForward className="w-4 h-4" />
+                    <button onClick={() => seek(10)} className="p-1 text-white/60 hover:text-white transition-colors" title="Forward 10s (→)">
+                      <div className="relative">
+                        <SkipForward className="w-4 h-4" />
+                        <span className="absolute inset-0 flex items-center justify-center text-[7px] font-bold text-white/80">10</span>
+                      </div>
                     </button>
                     <div className="relative" onMouseEnter={() => setShowVolume(true)} onMouseLeave={() => setShowVolume(false)}>
-                      <button onClick={toggleMute} className="text-white/70 hover:text-white transition-colors">
+                      <button onClick={toggleMute} className="p-1 text-white/60 hover:text-white transition-colors">
                         {muted || volume === 0 ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
                       </button>
                       <div className={`absolute bottom-full left-1/2 -translate-x-1/2 mb-2 transition-all duration-200 ${
@@ -466,11 +514,11 @@ export default function VideoPlayer() {
                         </div>
                       </div>
                     </div>
-                    <span className="text-xs text-gray-300 font-mono">
+                    <span className="text-xs text-gray-300 font-mono ml-1">
                       {formatTime(currentTime)} / {formatTime(duration)}
                     </span>
                     <div className="flex-1" />
-                    <button onClick={toggleFullscreen} className="text-white/70 hover:text-white transition-colors">
+                    <button onClick={toggleFullscreen} className="p-1 text-white/60 hover:text-white transition-colors">
                       {isFullscreen ? <Minimize className="w-5 h-5" /> : <Maximize className="w-5 h-5" />}
                     </button>
                   </div>
@@ -515,26 +563,6 @@ export default function VideoPlayer() {
             </div>
           )}
 
-          {introChapter && (
-            <button
-              onClick={() => handleSkipChapter('intro')}
-              className={`absolute right-4 px-3 py-1.5 bg-white/90 hover:bg-white text-black text-xs font-bold rounded-md transition-all z-10 ${
-                showControls ? 'bottom-28' : 'bottom-4'
-              }`}
-            >
-              Skip Intro
-            </button>
-          )}
-          {outroChapter && (
-            <button
-              onClick={() => handleSkipChapter('outro')}
-              className={`absolute right-4 px-3 py-1.5 bg-white/90 hover:bg-white text-black text-xs font-bold rounded-md transition-all z-10 ${
-                showControls ? (introChapter ? 'bottom-36' : 'bottom-28') : (introChapter ? 'bottom-14' : 'bottom-4')
-              }`}
-            >
-              Skip Outro
-            </button>
-          )}
         </div>
       </div>
 
