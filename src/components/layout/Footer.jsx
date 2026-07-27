@@ -85,7 +85,11 @@ export default function Footer() {
             &copy; 2026 Kaisen X Anime. All rights reserved.
           </p>
           <p className="text-xs text-gray-600">
-            This site does not store any files on its server. All contents are provided by non-affiliated third parties.
+            Disclaimer: Kaisen X Anime respects the intellectual property rights of content owners.
+            All trademarks, logos, artwork, images, videos, and other copyrighted materials displayed
+            on this platform remain the property of their respective owners. Where applicable, Kaisen X
+            Anime provides access to content through third-party sources and does not claim ownership
+            of third-party copyrighted materials.
           </p>
         </div>
       </div>
