@@ -46,6 +46,8 @@ async function ensureProfile(firebaseUser, name) {
     watchlist: [],
     continueWatching: [],
     watchMinutes: 0,
+    badges: [],
+    commentsPosted: 0,
     createdAt: serverTimestamp(),
   }
   await setDoc(doc(db, 'users', firebaseUser.uid), profile)

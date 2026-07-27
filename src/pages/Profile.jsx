@@ -3,7 +3,8 @@ import { useState } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { AVATAR_CHARACTERS } from '../data/avatars'
 import { getStatusLabel } from '../data/mockData'
-import { Crown, Calendar, Film, Heart, Clock, ListChecks, Settings, Play, X, Check, Trash2 } from 'lucide-react'
+import { BADGES } from '../data/badges'
+import { Crown, Calendar, Film, Heart, Clock, ListChecks, Settings, Play, X, Check, Trash2, Award } from 'lucide-react'
 import ContinueWatchingCard from '../components/ui/ContinueWatchingCard'
 
 function CollectionCard({ item, onRemove }) {
@@ -123,6 +124,27 @@ export default function Profile() {
           </div>
         ))}
       </div>
+
+      {(user.badges || []).length > 0 && (
+        <section className="mb-10">
+          <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+            <Award className="w-5 h-5 text-anime-orange" /> Achievement Badges
+          </h2>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+            {Object.entries(BADGES).map(([id, badge]) => {
+              const earned = (user.badges || []).includes(id)
+              return (
+                <div key={id} className={`rounded-xl border p-4 text-center transition-all ${earned ? 'bg-white/[0.04] border-white/10' : 'bg-white/[0.01] border-white/5 opacity-40'}`}>
+                  <span className="text-2xl block mb-1">{badge.icon}</span>
+                  <p className="text-xs font-semibold text-white">{badge.name}</p>
+                  <p className="text-[10px] text-gray-500 mt-0.5">{badge.description}</p>
+                  {earned && <span className="inline-block mt-1.5 text-[10px] font-bold text-green-400 bg-green-400/10 px-1.5 py-0.5 rounded">Earned</span>}
+                </div>
+              )
+            })}
+          </div>
+        </section>
+      )}
 
       {(user.continueWatching || []).length > 0 && (
         <section className="mb-10">

@@ -27,7 +27,31 @@ service cloud.firestore {
         request.resource.data.text.size() >= 2 &&
         request.resource.data.text.size() <= 500;
 
-      allow update, delete: if false;
+      allow update: if
+        request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['likes', 'dislikes', 'likedBy', 'dislikedBy', 'pinned', 'pinnedBy']);
+
+      allow delete: if request.auth != null &&
+        request.auth.uid == resource.data.uid;
+
+      match /replies/{replyId} {
+        allow read: if true;
+
+        allow create: if
+          request.resource.data.name is string &&
+          request.resource.data.name.size() > 0 &&
+          request.resource.data.name.size() <= 30 &&
+          request.resource.data.text is string &&
+          request.resource.data.text.size() >= 2 &&
+          request.resource.data.text.size() <= 500;
+
+        allow update: if
+          request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['likes', 'dislikes', 'likedBy', 'dislikedBy']);
+
+        allow delete: if request.auth != null &&
+          request.auth.uid == resource.data.uid;
+      }
     }
   }
 }
