@@ -109,6 +109,15 @@ body {
   to { opacity: 1; transform: translateY(0); }
 }
 
+@keyframes nextEpSlideIn {
+  from { opacity: 0; transform: translateY(16px) scale(0.95); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.next-ep-enter {
+  animation: nextEpSlideIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
 /* ── About collage animation ───────────────────────────── */
 
 .collage-wrap {
@@ -234,5 +243,8 @@ body {
   .collage-wrap:hover .collage-img {
     animation: none !important;
     filter: saturate(1.3) brightness(1.08);
+  }
+  .next-ep-enter {
+    animation: none !important;
   }
 }

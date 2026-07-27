@@ -6,6 +6,7 @@ import { fetchMediaById } from '../api/anilist'
 import { resolveStream, getServers, getSources } from '../api/anikoto'
 import { useAuth } from '../context/AuthContext'
 import CommentSection from '../components/CommentSection'
+import NextEpisodeOverlay from '../components/ui/NextEpisodeOverlay'
 
 function encodeHeaders(headers) {
   return btoa(JSON.stringify(headers)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '')
@@ -37,6 +38,10 @@ export default function VideoPlayer() {
   const [providerError, setProviderError] = useState(null)
   const [cdnHeaders, setCdnHeaders] = useState({})
   const { user, addContinueWatching, updateContinueWatchingProgress, removeContinueWatching, addWatchMinutes } = useAuth()
+
+  const [showNextEpisode, setShowNextEpisode] = useState(false)
+  const [nextEpLoading, setNextEpLoading] = useState(false)
+  const nextEpTriggeredRef = useRef(false)
   const watchStartRef = useRef(Date.now())
   const lastSaveRef = useRef(0)
   const resumeSetRef = useRef(false)
@@ -59,6 +64,13 @@ export default function VideoPlayer() {
   const controlsTimeoutRef = useRef(null)
 
   const hasNextEpisode = totalEpisodes > 0 && currentEp < totalEpisodes
+
+  const autoplayEnabled = (() => {
+    try {
+      const s = JSON.parse(localStorage.getItem('appSettings') || '{}')
+      return s.autoplay !== false
+    } catch { return true }
+  })()
 
   useEffect(() => {
     cwRef.current = user?.continueWatching || []
@@ -359,6 +371,13 @@ export default function VideoPlayer() {
     const onPause = () => { setPlaying(false); setShowControls(true) }
     const onTimeUpdate = () => {
       setCurrentTime(video.currentTime)
+      if (autoplayEnabled && hasNextEpisode && !showNextEpisode && !nextEpTriggeredRef.current) {
+        const remaining = video.duration - video.currentTime
+        if (remaining <= 20 && remaining > 0) {
+          nextEpTriggeredRef.current = true
+          setShowNextEpisode(true)
+        }
+      }
       if (!streamData?.chapters?.length) return
       const intro = streamData.chapters.find(ch => /intro/i.test(ch.title))
       const outro = streamData.chapters.find(ch => /outro|ed\b|ending/i.test(ch.title))
@@ -383,6 +402,29 @@ export default function VideoPlayer() {
       video.removeEventListener('loadedmetadata', onLoadedMetadata)
     }
   }, [streamData])
+
+  useEffect(() => {
+    nextEpTriggeredRef.current = false
+    setShowNextEpisode(false)
+    setNextEpLoading(false)
+  }, [animeId, currentEp, audioMode])
+
+  const [nextCountdown, setNextCountdown] = useState(5)
+
+  useEffect(() => {
+    if (!showNextEpisode || nextEpLoading) return
+    if (nextCountdown <= 0) {
+      navigate(`/watch/${animeId}/${currentEp + 1}?total=${totalEpisodes}&audio=${audioMode}`)
+      return
+    }
+    if (!playing) return
+    const timer = setTimeout(() => setNextCountdown((c) => c - 1), 1000)
+    return () => clearTimeout(timer)
+  }, [showNextEpisode, nextCountdown, playing, nextEpLoading, animeId, currentEp, totalEpisodes, audioMode, navigate])
+
+  useEffect(() => {
+    if (showNextEpisode) setNextCountdown(5)
+  }, [showNextEpisode])
 
   useEffect(() => {
     const onFsChange = () => setIsFullscreen(!!document.fullscreenElement)
@@ -533,6 +575,23 @@ export default function VideoPlayer() {
                   </div>
                 </div>
               </div>
+
+              <NextEpisodeOverlay
+                visible={showNextEpisode}
+                nextEpisode={currentEp + 1}
+                totalEpisodes={totalEpisodes}
+                animeTitle={anime?.title || ''}
+                countdown={nextCountdown}
+                loading={nextEpLoading}
+                onWatchNow={() => {
+                  setNextEpLoading(true)
+                  navigate(`/watch/${animeId}/${currentEp + 1}?total=${totalEpisodes}&audio=${audioMode}`)
+                }}
+                onCancel={() => {
+                  setShowNextEpisode(false)
+                  nextEpTriggeredRef.current = false
+                }}
+              />
             </>
           ) : (
             <div className="w-full h-full flex items-center justify-center flex-col gap-4">

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { Link, Navigate } from 'react-router-dom'
 import {
   ArrowLeft, Palette, Globe, Eye, EyeOff, User, Mail, Lock,
-  Save, CheckCircle, Trash2, LogOut, Monitor,
+  Save, CheckCircle, Trash2, LogOut, Monitor, SkipForward,
 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 
@@ -197,6 +197,28 @@ export default function Settings() {
                 <span
                   className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full transition-transform ${
                     settings.reduceAnimations ? 'translate-x-5' : ''
+                  }`}
+                />
+              </button>
+            </div>
+
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <SkipForward className="w-5 h-5 text-gray-400" />
+                <div>
+                  <p className="text-sm font-medium text-white">Autoplay Next Episode</p>
+                  <p className="text-xs text-gray-500">Automatically play the next episode</p>
+                </div>
+              </div>
+              <button
+                onClick={() => handleToggle('autoplay')}
+                className={`relative w-11 h-6 rounded-full transition-colors ${
+                  settings.autoplay !== false ? 'bg-primary' : 'bg-white/10'
+                }`}
+              >
+                <span
+                  className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full transition-transform ${
+                    settings.autoplay !== false ? 'translate-x-5' : ''
                   }`}
                 />
               </button>
