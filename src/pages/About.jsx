@@ -40,7 +40,7 @@ export default function About() {
           <img
             src="/collage.jpeg"
             alt="Anime collage"
-            className="collage-img w-full h-full object-cover relative z-[1]"
+            className="collage-img w-full h-full object-cover relative z-[1] brightness-125"
           />
           <div className="collage-glow absolute inset-0 z-[2] pointer-events-none rounded-md" />
           <div className="collage-sweep absolute inset-0 z-[3] pointer-events-none rounded-md" />
