@@ -40,6 +40,27 @@ const GENRE_ICONS = {
   thriller: '🔪',
 }
 
+const GENRE_IMAGES = {
+  action: '/genre-images/action.jpg',
+  adventure: '/genre-images/adventure.jpg',
+  comedy: '/genre-images/comedy.jpg',
+  drama: '/genre-images/drama.jpg',
+  ecchi: '/genre-images/ecchi.jpg',
+  fantasy: '/genre-images/fantasy.jpg',
+  horror: '/genre-images/horror.jpg',
+  mahoushoujo: '/genre-images/mahoushoujo.jpg',
+  mecha: '/genre-images/mecha.jpg',
+  music: '/genre-images/music.jpg',
+  mystery: '/genre-images/mystery.jpg',
+  psychological: '/genre-images/psychological.jpg',
+  romance: '/genre-images/romance.jpg',
+  scifi: '/genre-images/scifi.jpg',
+  sliceoflife: '/genre-images/sliceoflife.jpg',
+  sports: '/genre-images/sports.jpg',
+  supernatural: '/genre-images/supernatural.jpg',
+  thriller: '/genre-images/thriller.jpg',
+}
+
 const GENRE_NAMES = {
   action: 'Action',
   adventure: 'Adventure',
@@ -75,6 +96,7 @@ export function getAllGenres() {
     name: GENRE_NAMES[id] || id,
     color: GENRE_COLORS[id],
     icon: GENRE_ICONS[id],
+    image: GENRE_IMAGES[id] || '',
   }))
 }
 

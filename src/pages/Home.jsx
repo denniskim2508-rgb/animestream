@@ -110,18 +110,17 @@ export default function Home() {
               <Link
                 key={genre.id}
                 to={`/genres/${genre.id}`}
-                className="group relative overflow-hidden rounded-xl p-4 sm:p-5 text-center transition-all hover:scale-105 hover:shadow-xl"
-                style={{
-                  background: `linear-gradient(135deg, ${genre.color}15, ${genre.color}05)`,
-                  border: `1px solid ${genre.color}20`,
-                }}
+                className="group relative overflow-hidden rounded-xl aspect-[3/4] flex items-end transition-all hover:scale-105 hover:shadow-xl"
               >
-                <span className="text-3xl sm:text-4xl block mb-2">{genre.icon}</span>
-                <span className="text-sm font-semibold text-white">{genre.name}</span>
-                <div
-                  className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity"
-                  style={{ background: `radial-gradient(circle at center, ${genre.color}10, transparent)` }}
+                <img
+                  src={genre.image}
+                  alt={genre.name}
+                  className="absolute inset-0 w-full h-full object-cover"
                 />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+                <span className="relative z-10 w-full text-center text-sm font-bold text-white pb-3 drop-shadow-lg">
+                  {genre.name}
+                </span>
               </Link>
             ))}
           </div>
