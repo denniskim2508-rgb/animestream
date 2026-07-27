@@ -18,6 +18,8 @@ import Notifications from './pages/Notifications'
 import Settings from './pages/Settings'
 import TermsOfService from './pages/TermsOfService'
 import PrivacyPolicy from './pages/PrivacyPolicy'
+import DMCA from './pages/DMCA'
+import HelpCenter from './pages/HelpCenter'
 import { SkeletonPage } from './components/ui/Skeleton'
 
 function PageLoader() {
@@ -151,6 +153,22 @@ export default function App() {
         element={
           <Layout>
             <PrivacyPolicy />
+          </Layout>
+        }
+      />
+      <Route
+        path="/dmca"
+        element={
+          <Layout>
+            <DMCA />
+          </Layout>
+        }
+      />
+      <Route
+        path="/help"
+        element={
+          <Layout>
+            <HelpCenter />
           </Layout>
         }
       />

@@ -64,10 +64,11 @@ export default function Footer() {
             <ul className="space-y-2">
               {[
                 { label: 'Profile', to: '/profile' },
-                { label: 'Help Center', to: '/' },
+                { label: 'Help Center', to: '/help' },
                 { label: 'About', to: '/about' },
                 { label: 'Terms of Service', to: '/terms' },
                 { label: 'Privacy Policy', to: '/privacy' },
+                { label: 'DMCA', to: '/dmca' },
               ].map((item) => (
                 <li key={item.label}>
                   <Link to={item.to} className="text-sm text-gray-400 hover:text-white transition-colors">
