@@ -215,7 +215,7 @@ export async function fetchBrowse({ page = 1, perPage = 20, genre, sort = 'POPUL
       }
     }
   `
-  const data = await anilistFetch(query, { page, perPage, genre, sort, search, status, season, seasonYear: format, format })
+  const data = await anilistFetch(query, { page, perPage, genre, sort, search, status, season, format })
   return {
     results: data.Page.media.map(normalizeMedia),
     pageInfo: data.Page.pageInfo,
@@ -241,6 +241,34 @@ export async function fetchTopUpcoming(page = 1, perPage = 10) {
     query ($page: Int, $perPage: Int) {
       Page(page: $page, perPage: $perPage) {
         media(type: ANIME, sort: POPULARITY_DESC, status: NOT_YET_RELEASED, isAdult: false) {
+          ${MEDIA_FRAGMENT}
+        }
+      }
+    }
+  `
+  const data = await anilistFetch(query, { page, perPage })
+  return data.Page.media.map(normalizeMedia)
+}
+
+export async function fetchPopularMovies(page = 1, perPage = 10) {
+  const query = `
+    query ($page: Int, $perPage: Int) {
+      Page(page: $page, perPage: $perPage) {
+        media(type: ANIME, format: MOVIE, sort: POPULARITY_DESC, isAdult: false) {
+          ${MEDIA_FRAGMENT}
+        }
+      }
+    }
+  `
+  const data = await anilistFetch(query, { page, perPage })
+  return data.Page.media.map(normalizeMedia)
+}
+
+export async function fetchTopRatedMovies(page = 1, perPage = 10) {
+  const query = `
+    query ($page: Int, $perPage: Int) {
+      Page(page: $page, perPage: $perPage) {
+        media(type: ANIME, format: MOVIE, sort: SCORE_DESC, isAdult: false) {
           ${MEDIA_FRAGMENT}
         }
       }

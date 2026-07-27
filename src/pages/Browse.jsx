@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import AnimeCard from '../components/ui/AnimeCard'
 import { fetchBrowse } from '../api/anilist'
 import { getAllGenres } from '../data/mockData'
@@ -20,6 +21,15 @@ const STATUS_OPTIONS = [
   { value: 'NOT_YET_RELEASED', label: 'Upcoming' },
 ]
 
+const FORMAT_OPTIONS = [
+  { value: '', label: 'All Formats' },
+  { value: 'TV', label: 'TV' },
+  { value: 'MOVIE', label: 'Movie' },
+  { value: 'OVA', label: 'OVA' },
+  { value: 'ONA', label: 'ONA' },
+  { value: 'SPECIAL', label: 'Special' },
+]
+
 const SEASON_OPTIONS = [
   { value: '', label: 'All Seasons' },
   { value: 'WINTER', label: 'Winter' },
@@ -29,6 +39,7 @@ const SEASON_OPTIONS = [
 ]
 
 export default function Browse() {
+  const [searchParams] = useSearchParams()
   const [anime, setAnime] = useState([])
   const [loading, setLoading] = useState(true)
   const [page, setPage] = useState(1)
@@ -37,6 +48,7 @@ export default function Browse() {
   const [sortBy, setSortBy] = useState('POPULARITY_DESC')
   const [status, setStatus] = useState('')
   const [season, setSeason] = useState('')
+  const [format, setFormat] = useState(searchParams.get('format') || '')
 
   const genres = getAllGenres()
 
@@ -50,6 +62,7 @@ export default function Browse() {
         sort: sortBy,
         status: status || undefined,
         season: season || undefined,
+        format: format || undefined,
       })
       setAnime(pageNum === 1 ? data.results : (prev) => [...prev, ...data.results])
       setHasNext(data.pageInfo.hasNextPage)
@@ -58,7 +71,7 @@ export default function Browse() {
     } finally {
       setLoading(false)
     }
-  }, [selectedGenre, sortBy, status, season])
+  }, [selectedGenre, sortBy, status, season, format])
 
   useEffect(() => {
     setPage(1)
@@ -119,6 +132,16 @@ export default function Browse() {
             className="bg-surface border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary/50"
           >
             {STATUS_OPTIONS.map((o) => (
+              <option key={o.value} value={o.value}>{o.label}</option>
+            ))}
+          </select>
+
+          <select
+            value={format}
+            onChange={(e) => setFormat(e.target.value)}
+            className="bg-surface border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary/50"
+          >
+            {FORMAT_OPTIONS.map((o) => (
               <option key={o.value} value={o.value}>{o.label}</option>
             ))}
           </select>

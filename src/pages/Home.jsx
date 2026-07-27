@@ -4,7 +4,7 @@ import HeroBanner from '../components/ui/HeroBanner'
 import AnimeCarousel from '../components/ui/AnimeCarousel'
 import ContinueWatchingCard from '../components/ui/ContinueWatchingCard'
 import { SkeletonBanner, SkeletonCarousel } from '../components/ui/Skeleton'
-import { fetchHomepageData } from '../api/anilist'
+import { fetchHomepageData, fetchPopularMovies, fetchTopRatedMovies } from '../api/anilist'
 import { fetchRecentEpisodes } from '../api/anikoto'
 import { getAllGenres } from '../data/mockData'
 import { Link } from 'react-router-dom'
@@ -18,6 +18,20 @@ export default function Home() {
   const { data: home, isLoading } = useQuery({
     queryKey: ['homepage'],
     queryFn: () => fetchHomepageData(10),
+    staleTime: 5 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
+  })
+
+  const { data: popularMovies } = useQuery({
+    queryKey: ['popularMovies'],
+    queryFn: () => fetchPopularMovies(1, 10),
+    staleTime: 5 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
+  })
+
+  const { data: topRatedMovies } = useQuery({
+    queryKey: ['topRatedMovies'],
+    queryFn: () => fetchTopRatedMovies(1, 10),
     staleTime: 5 * 60 * 1000,
     gcTime: 30 * 60 * 1000,
   })
@@ -155,6 +169,18 @@ export default function Home() {
         ) : home?.upcoming?.length > 0 ? (
           <section>
             <AnimeCarousel title="Top Upcoming" animeList={home.upcoming} seeAllLink="/browse" />
+          </section>
+        ) : null}
+
+        {popularMovies?.length > 0 ? (
+          <section>
+            <AnimeCarousel title="Popular Movies" animeList={popularMovies} seeAllLink="/browse?format=MOVIE" />
+          </section>
+        ) : null}
+
+        {topRatedMovies?.length > 0 ? (
+          <section>
+            <AnimeCarousel title="Top Rated Movies" animeList={topRatedMovies} seeAllLink="/browse?format=MOVIE" />
           </section>
         ) : null}
       </div>
