@@ -1,11 +1,74 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { collection, addDoc, query, orderBy, onSnapshot, serverTimestamp } from 'firebase/firestore'
 import { db } from '../firebase'
 import { useAuth } from '../context/AuthContext'
-import { MessageCircle, Send, Loader2 } from 'lucide-react'
+import { MessageCircle, Send, Loader2, SmilePlus } from 'lucide-react'
 import { Link } from 'react-router-dom'
 
 const PLACEHOLDER_AVATAR = 'https://ui-avatars.com/api/?name=User&background=6d28d9&color=fff&size=96'
+
+const EMOJI_CATEGORIES = {
+  'Smileys': ['😀','😂','🤣','😊','😍','🥰','😘','😎','🤩','🥳','😏','😅','😉','😌','😴','🥱','🤗','🤭','🤫','🤔','😐','😑','😶','🙄','😬','😮‍💨','🤥','😌','😔','😪','🤤','😴','😷','🤒','🤕','🤢','🤮','🥵','🥶','🥴','😵','🤯','🤠','🥳','🥸','😎','🤓','🧐'],
+  'Reactions': ['❤️','🔥','💯','✨','⭐','🌟','💪','👏','🙌','👍','👎','✌️','🤝','🙏','💕','💖','💗','💘','💝','💜','💙','💚','🧡','🖤','🤍','💔','❣️','💞','💓','💗','🎉','🎊','🏆','🥇','🎯','💥','💫','🌈'],
+  'Anime': ['⚡','🗡️','🛡️','⚔️','🏴','🎌','🌸','🌺','🍃','🌙','☀️','🔥','💧','🌊','🌪️','❄️','☠️','👻','👹','👺','💀','🦷','👁️','🧠','💜','🩸','🌀','🔮','✨','🎆','🎇','🪄','🗡️','🏹','🔮','📜','🗝️','🍄','🐉','🦎'],
+  'Food': ['🍵','🍶','🍜','🍙','🍣','🍡','🍱','🍘','🍥','🥠','🍚','🍘','🍢','🍡','🧁','🍰','🎂','🍩','🍪','🍫','🍬','🍭','🍮','🍿','🥤','🧋','🍶','🍺','🍻','🥂','🍷','🍸','🍹'],
+  'Objects': ['🎮','🕹️','🎧','🎵','🎶','🎤','🎬','📺','📷','🔍','💻','⌨️','🖥️','📱','🔔','🔕','💬','💭','🗯️','📝','📌','📎','🔒','🔑','🗡️','🛡️'],
+}
+
+function EmojiPicker({ onSelect, onClose }) {
+  const [activeCategory, setActiveCategory] = useState('Smileys')
+  const ref = useRef(null)
+
+  const handleClickOutside = useCallback((e) => {
+    if (ref.current && !ref.current.contains(e.target)) onClose()
+  }, [onClose])
+
+  useEffect(() => {
+    document.addEventListener('mousedown', handleClickOutside)
+    document.addEventListener('touchstart', handleClickOutside)
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+      document.removeEventListener('touchstart', handleClickOutside)
+    }
+  }, [handleClickOutside])
+
+  return (
+    <div
+      ref={ref}
+      className="absolute bottom-full right-0 mb-2 w-[300px] sm:w-[340px] bg-gray-900 border border-white/10 rounded-xl shadow-2xl shadow-black/50 z-50 overflow-hidden"
+    >
+      <div className="flex gap-0.5 px-2 pt-2 overflow-x-auto scrollbar-hide">
+        {Object.keys(EMOJI_CATEGORIES).map((cat) => (
+          <button
+            key={cat}
+            onClick={() => setActiveCategory(cat)}
+            className={`px-2.5 py-1 text-[11px] font-medium rounded-lg whitespace-nowrap transition-colors ${
+              activeCategory === cat
+                ? 'bg-primary text-white'
+                : 'text-gray-400 hover:text-white hover:bg-white/5'
+            }`}
+          >
+            {cat}
+          </button>
+        ))}
+      </div>
+      <div className="p-2 grid grid-cols-8 gap-0.5 max-h-[200px] overflow-y-auto">
+        {(EMOJI_CATEGORIES[activeCategory] || []).map((emoji, i) => (
+          <button
+            key={`${emoji}-${i}`}
+            onClick={() => onSelect(emoji)}
+            className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white/10 transition-colors text-lg"
+          >
+            {emoji}
+          </button>
+        ))}
+      </div>
+      <div className="px-2 pb-2 pt-1 border-t border-white/5">
+        <p className="text-[10px] text-gray-600 text-center">Click an emoji to insert</p>
+      </div>
+    </div>
+  )
+}
 
 export default function CommentSection({ animeId, episode }) {
   const { user } = useAuth()
@@ -14,6 +77,8 @@ export default function CommentSection({ animeId, episode }) {
   const [name, setName] = useState(() => localStorage.getItem('comment_name') || '')
   const [text, setText] = useState('')
   const [sending, setSending] = useState(false)
+  const [showEmoji, setShowEmoji] = useState(false)
+  const inputRef = useRef(null)
 
   const messagesRef = collection(db, 'comments', String(animeId), 'episodes', String(episode), 'messages')
 
@@ -28,6 +93,12 @@ export default function CommentSection({ animeId, episode }) {
     })
     return unsub
   }, [animeId, episode])
+
+  const insertEmoji = (emoji) => {
+    setText((prev) => prev + emoji)
+    setShowEmoji(false)
+    inputRef.current?.focus()
+  }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -100,8 +171,9 @@ export default function CommentSection({ animeId, episode }) {
           )}
           <div className="flex-1 flex flex-col gap-2">
             {user && <span className="text-sm font-medium text-white">{user.name}</span>}
-            <div className="flex gap-2">
+            <div className="flex gap-2 items-center">
               <input
+                ref={inputRef}
                 type="text"
                 value={text}
                 onChange={(e) => setText(e.target.value)}
@@ -109,6 +181,23 @@ export default function CommentSection({ animeId, episode }) {
                 maxLength={500}
                 className="flex-1 px-4 py-2.5 bg-white/5 border border-white/10 rounded-lg text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary/50"
               />
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setShowEmoji(!showEmoji)}
+                  className={`p-2.5 rounded-lg transition-colors ${
+                    showEmoji
+                      ? 'bg-primary/20 text-primary-light'
+                      : 'text-gray-400 hover:text-white hover:bg-white/5'
+                  }`}
+                  title="Emoji"
+                >
+                  <SmilePlus className="w-5 h-5" />
+                </button>
+                {showEmoji && (
+                  <EmojiPicker onSelect={insertEmoji} onClose={() => setShowEmoji(false)} />
+                )}
+              </div>
               <button
                 type="submit"
                 disabled={sending || text.trim().length < 2 || (!user && !name.trim())}
