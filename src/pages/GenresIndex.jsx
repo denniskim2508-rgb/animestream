@@ -1,6 +1,5 @@
 import { Link } from 'react-router-dom'
 import { getAllGenres } from '../data/mockData'
-import { ArrowRight } from 'lucide-react'
 
 export default function GenresIndex() {
   const genres = getAllGenres()
@@ -10,28 +9,22 @@ export default function GenresIndex() {
       <h1 className="text-3xl font-black text-white mb-2">Browse by Genre</h1>
       <p className="text-gray-400 mb-8">Explore anime across every genre and find your next favorite series</p>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3">
         {genres.map((genre) => (
           <Link
             key={genre.id}
             to={`/genres/${genre.id}`}
-            className="group relative overflow-hidden rounded-2xl p-6 sm:p-8 transition-all hover:scale-[1.02] hover:shadow-xl"
-            style={{
-              background: `linear-gradient(135deg, ${genre.color}15, ${genre.color}05)`,
-              border: `1px solid ${genre.color}20`,
-            }}
+            className="group relative overflow-hidden rounded-xl aspect-[3/4] flex items-end transition-all hover:scale-105 hover:shadow-xl"
           >
-            <div className="relative z-10">
-              <span className="text-5xl block mb-3">{genre.icon}</span>
-              <h3 className="text-xl font-bold text-white mb-1">{genre.name}</h3>
-              <div className="flex items-center gap-1 text-sm font-medium transition-colors" style={{ color: genre.color }}>
-                Explore <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-              </div>
-            </div>
-            <div
-              className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity"
-              style={{ background: `radial-gradient(circle at 80% 80%, ${genre.color}20, transparent)` }}
+            <img
+              src={genre.image}
+              alt={genre.name}
+              className="absolute inset-0 w-full h-full object-cover"
             />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+            <span className="relative z-10 w-full text-center text-sm font-bold text-white pb-3 drop-shadow-lg">
+              {genre.name}
+            </span>
           </Link>
         ))}
       </div>

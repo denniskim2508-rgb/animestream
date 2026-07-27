@@ -106,7 +106,7 @@ export default function Home() {
             <Sparkles className="w-5 h-5 text-primary-light" /> Browse by Genre
           </h2>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
-            {genres.slice(0, 6).map((genre) => (
+            {genres.map((genre) => (
               <Link
                 key={genre.id}
                 to={`/genres/${genre.id}`}
