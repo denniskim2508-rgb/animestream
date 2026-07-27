@@ -16,6 +16,8 @@ import Profile from './pages/Profile'
 import About from './pages/About'
 import Notifications from './pages/Notifications'
 import Settings from './pages/Settings'
+import TermsOfService from './pages/TermsOfService'
+import PrivacyPolicy from './pages/PrivacyPolicy'
 import { SkeletonPage } from './components/ui/Skeleton'
 
 function PageLoader() {
@@ -133,6 +135,22 @@ export default function App() {
         element={
           <Layout>
             <Settings />
+          </Layout>
+        }
+      />
+      <Route
+        path="/terms"
+        element={
+          <Layout>
+            <TermsOfService />
+          </Layout>
+        }
+      />
+      <Route
+        path="/privacy"
+        element={
+          <Layout>
+            <PrivacyPolicy />
           </Layout>
         }
       />

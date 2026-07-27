@@ -66,8 +66,8 @@ export default function Footer() {
                 { label: 'Profile', to: '/profile' },
                 { label: 'Help Center', to: '/' },
                 { label: 'About', to: '/about' },
-                { label: 'Terms of Service', to: '/' },
-                { label: 'Privacy Policy', to: '/' },
+                { label: 'Terms of Service', to: '/terms' },
+                { label: 'Privacy Policy', to: '/privacy' },
               ].map((item) => (
                 <li key={item.label}>
                   <Link to={item.to} className="text-sm text-gray-400 hover:text-white transition-colors">
