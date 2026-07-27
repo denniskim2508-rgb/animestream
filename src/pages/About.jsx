@@ -35,17 +35,6 @@ export default function About() {
             Explore Anime <ArrowRight className="w-4 h-4" />
           </Link>
         </div>
-
-        <div className="collage-wrap relative z-[2] rounded-md overflow-hidden h-[340px] lg:h-[420px]">
-          <img
-            src="/collage.jpeg"
-            alt="Anime collage"
-            className="collage-img w-full h-full object-cover relative z-[1] brightness-125"
-          />
-          <div className="collage-glow absolute inset-0 z-[2] pointer-events-none rounded-md" />
-          <div className="collage-sweep absolute inset-0 z-[3] pointer-events-none rounded-md" />
-          <div className="collage-gradient absolute inset-0 z-[2] pointer-events-none rounded-md" />
-        </div>
       </section>
 
       <section className="max-w-[1000px] mx-auto px-4 sm:px-6 lg:px-8 pb-24">
