@@ -44,7 +44,7 @@ const GENRE_IMAGES = {
   action: '/genre-images/action.jpg',
   adventure: '/genre-images/adventure.jpg',
   comedy: '/genre-images/comedy.jpg',
-  drama: '/genre-images/drama.jpg',
+  drama: '/genre-images/drama.png',
   ecchi: '/genre-images/ecchi.jpg',
   fantasy: '/genre-images/fantasy.jpg',
   horror: '/genre-images/horror.jpg',
