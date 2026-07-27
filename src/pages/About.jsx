@@ -11,7 +11,7 @@ export default function About() {
             backgroundImage: 'url(/jujutsu-bg.jpg)',
           }}
         />
-        <div className="absolute inset-0 z-[1] bg-black/75" />
+        <div className="absolute inset-0 z-[1] bg-black/50" />
         <div className="relative z-[2]">
           <h1 className="text-5xl sm:text-6xl font-extrabold tracking-tight text-white">
             ABOUT US
@@ -34,7 +34,7 @@ export default function About() {
           </Link>
         </div>
 
-        <div className="collage-wrap relative rounded-md overflow-hidden h-[340px] lg:h-[420px]">
+        <div className="collage-wrap relative z-[3] rounded-md overflow-hidden h-[340px] lg:h-[420px]">
           <img
             src="/collage.jpeg"
             alt="Anime collage"
