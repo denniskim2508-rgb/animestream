@@ -231,14 +231,37 @@ body {
   50% { background-position: -100% 100%; }
 }
 
+/* ── About hero background ─────────────────────────────── */
+
+.about-hero-bg {
+  background-size: cover;
+  background-position: center;
+  filter: grayscale(100%) brightness(35%) contrast(120%) blur(2px);
+  opacity: 0;
+  animation: aboutHeroFadeIn 1s ease forwards, aboutHeroZoom 25s ease-in-out infinite alternate;
+}
+
+@keyframes aboutHeroFadeIn {
+  to { opacity: 0.15; }
+}
+
+@keyframes aboutHeroZoom {
+  0% { transform: scale(1); }
+  100% { transform: scale(1.03); }
+}
+
 /* Reduced motion */
 @media (prefers-reduced-motion: reduce) {
   .collage-wrap,
   .collage-img,
   .collage-glow,
   .collage-gradient,
-  .collage-sweep {
+  .collage-sweep,
+  .about-hero-bg {
     animation: none !important;
+  }
+  .about-hero-bg {
+    opacity: 0.15;
   }
   .collage-wrap:hover .collage-img {
     animation: none !important;
