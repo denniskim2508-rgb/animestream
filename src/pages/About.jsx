@@ -4,15 +4,17 @@ import { ArrowRight } from 'lucide-react'
 export default function About() {
   return (
     <div className="min-h-screen bg-[#09090B]">
-      <section className="relative max-w-[1400px] mx-auto grid grid-cols-1 lg:grid-cols-2 gap-10 items-center px-4 sm:px-6 lg:px-8 py-20 overflow-hidden">
-        <div
-          className="absolute inset-0 z-0 about-hero-bg"
-          style={{
-            backgroundImage: 'url(/jujutsu-bg.jpg)',
-          }}
-        />
-        <div className="absolute inset-0 z-[1] bg-black/50" />
-        <div className="relative z-[2]">
+      <section className="relative max-w-[1400px] mx-auto grid grid-cols-1 lg:grid-cols-2 gap-10 items-center px-4 sm:px-6 lg:px-8 py-20">
+        <div className="absolute inset-0 overflow-hidden z-0">
+          <div
+            className="absolute inset-0 about-hero-bg"
+            style={{
+              backgroundImage: 'url(/jujutsu-bg.jpg)',
+            }}
+          />
+          <div className="absolute inset-0 bg-black/50" />
+        </div>
+        <div className="relative z-[1]">
           <h1 className="text-5xl sm:text-6xl font-extrabold tracking-tight text-white">
             ABOUT US
           </h1>
@@ -34,7 +36,7 @@ export default function About() {
           </Link>
         </div>
 
-        <div className="collage-wrap relative z-[3] rounded-md overflow-hidden h-[340px] lg:h-[420px]">
+        <div className="collage-wrap relative z-[2] rounded-md overflow-hidden h-[340px] lg:h-[420px]">
           <img
             src="/collage.jpeg"
             alt="Anime collage"
