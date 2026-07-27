@@ -164,14 +164,6 @@ export default function Home() {
           </section>
         ) : null}
 
-        {isLoading ? (
-          <SkeletonCarousel />
-        ) : home?.upcoming?.length > 0 ? (
-          <section>
-            <AnimeCarousel title="Top Upcoming" animeList={home.upcoming} seeAllLink="/browse" />
-          </section>
-        ) : null}
-
         {popularMovies?.length > 0 ? (
           <section>
             <AnimeCarousel title="Popular Movies" animeList={popularMovies} seeAllLink="/browse?format=MOVIE" />
@@ -181,6 +173,14 @@ export default function Home() {
         {topRatedMovies?.length > 0 ? (
           <section>
             <AnimeCarousel title="Top Rated Movies" animeList={topRatedMovies} seeAllLink="/browse?format=MOVIE" />
+          </section>
+        ) : null}
+
+        {isLoading ? (
+          <SkeletonCarousel />
+        ) : home?.upcoming?.length > 0 ? (
+          <section>
+            <AnimeCarousel title="Top Upcoming" animeList={home.upcoming} seeAllLink="/browse" />
           </section>
         ) : null}
       </div>
