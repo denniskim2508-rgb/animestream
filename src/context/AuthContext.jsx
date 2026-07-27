@@ -23,8 +23,25 @@ import {
 } from 'firebase/firestore'
 import { auth, db } from '../firebase'
 import { getRandomAvatar } from '../data/avatars'
+import { THEMES, DEFAULT_THEME } from '../data/themes'
 
 const AuthContext = createContext(null)
+
+function applyAccent(name) {
+  const theme = THEMES[name] || THEMES[DEFAULT_THEME]
+  const root = document.documentElement
+  root.style.setProperty('--color-primary', theme.primary)
+  root.style.setProperty('--color-primary-light', theme.primaryLight)
+  root.style.setProperty('--color-primary-dark', theme.primaryDark)
+}
+
+function getLocalAccent() {
+  try { return localStorage.getItem('appAccent') || DEFAULT_THEME } catch { return DEFAULT_THEME }
+}
+
+function saveLocalAccent(name) {
+  try { localStorage.setItem('appAccent', name) } catch { /* silent */ }
+}
 
 async function getProfile(uid) {
   const snap = await getDoc(doc(db, 'users', uid))
@@ -48,6 +65,7 @@ async function ensureProfile(firebaseUser, name) {
     watchMinutes: 0,
     badges: [],
     commentsPosted: 0,
+    accent: getLocalAccent(),
     createdAt: serverTimestamp(),
   }
   await setDoc(doc(db, 'users', firebaseUser.uid), profile)
@@ -59,10 +77,29 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true)
   const [audioMode, setAudioMode] = useState('sub')
   const [notifications, setNotifications] = useState([])
+  const [accent, setAccentState] = useState(() => getLocalAccent())
   const userRef = useRef(null)
   userRef.current = user
 
   const unreadCount = notifications.filter((n) => !n.read).length
+
+  const setAccent = useCallback(async (name) => {
+    const valid = THEMES[name] ? name : DEFAULT_THEME
+    setAccentState(valid)
+    applyAccent(valid)
+    saveLocalAccent(valid)
+    const u = userRef.current
+    if (u) {
+      try {
+        await updateDoc(doc(db, 'users', u.uid), { accent: valid })
+        setUser((prev) => ({ ...prev, accent: valid }))
+      } catch { /* silent */ }
+    }
+  }, [])
+
+  useEffect(() => {
+    applyAccent(accent)
+  }, [])
 
   useEffect(() => {
     if (!user) { setNotifications([]); return }
@@ -78,12 +115,17 @@ export function AuthProvider({ children }) {
         const profile = await getProfile(fbUser.uid)
         if (profile) {
           setUser({ uid: fbUser.uid, ...profile })
+          if (profile.accent) {
+            setAccentState(profile.accent)
+            applyAccent(profile.accent)
+          }
         } else {
           const profile2 = await ensureProfile(fbUser)
           setUser({ uid: fbUser.uid, ...profile2 })
         }
       } else {
         setUser(null)
+        applyAccent(getLocalAccent())
       }
       setLoading(false)
     })
@@ -332,6 +374,8 @@ export function AuthProvider({ children }) {
         markAllRead,
         clearAll,
         sendNotification,
+        accent,
+        setAccent,
       }}
     >
       {children}

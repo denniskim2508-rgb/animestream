@@ -5,19 +5,7 @@ import {
   Save, CheckCircle, LogOut, Monitor, SkipForward, AlertTriangle,
 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
-
-const ACCENT_COLORS = [
-  { name: 'Red', value: '#EF4444' },
-  { name: 'Purple', value: '#8B5CF6' },
-  { name: 'Blue', value: '#3B82F6' },
-  { name: 'Cyan', value: '#06B6D4' },
-  { name: 'Green', value: '#22C55E' },
-  { name: 'Orange', value: '#F97316' },
-  { name: 'Pink', value: '#EC4899' },
-  { name: 'Indigo', value: '#6366F1' },
-  { name: 'Teal', value: '#14B8A6' },
-  { name: 'Rose', value: '#F43F5E' },
-]
+import { THEMES } from '../data/themes'
 
 const LANGUAGES = [
   { code: 'en', label: 'English' },
@@ -41,16 +29,13 @@ function saveSettings(settings) {
 
 function applySettings(settings) {
   const root = document.documentElement
-  const accent = settings.accentColor || '#E01B24'
-  root.style.setProperty('--accent', accent)
-  root.style.setProperty('--button-primary', accent)
   if (settings.reduceAnimations) root.classList.add('reduce-animations')
   else root.classList.remove('reduce-animations')
   if (settings.language) root.setAttribute('lang', settings.language)
 }
 
 export default function Settings() {
-  const { user, logout, resetPassword, updateProfileField } = useAuth()
+  const { user, logout, resetPassword, updateProfileField, accent, setAccent } = useAuth()
   const [settings, setSettings] = useState(() => getSettings())
   const [name, setName] = useState(user?.name || '')
   const [saved, setSaved] = useState(false)
@@ -60,12 +45,6 @@ export default function Settings() {
   useEffect(() => { applySettings(settings) }, [])
 
   if (!user) return <Navigate to="/login" replace />
-
-  const handleAccentColor = (color) => {
-    const updated = { ...settings, accentColor: color }
-    setSettings(updated)
-    saveSettings(updated)
-  }
 
   const handleToggle = (key) => {
     const updated = { ...settings, [key]: !settings[key] }
@@ -158,20 +137,28 @@ export default function Settings() {
           </h2>
           <div className="space-y-5">
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-3">Accent Color</label>
-              <div className="flex flex-wrap gap-2">
-                {ACCENT_COLORS.map((c) => (
+              <label className="block text-sm font-medium text-gray-300 mb-3">Theme Accent</label>
+              <div className="flex gap-3">
+                {Object.entries(THEMES).map(([key, theme]) => (
                   <button
-                    key={c.value}
-                    onClick={() => handleAccentColor(c.value)}
-                    className={`w-9 h-9 rounded-full transition-all ${
-                      (settings.accentColor || '#E01B24') === c.value
-                        ? 'ring-2 ring-white ring-offset-2 ring-offset-gray-900 scale-110'
-                        : 'hover:scale-110'
+                    key={key}
+                    onClick={() => setAccent(key)}
+                    className={`flex items-center gap-3 px-4 py-3 rounded-xl border transition-all ${
+                      accent === key
+                        ? 'border-white/20 bg-white/10'
+                        : 'border-white/5 bg-white/5 hover:bg-white/10'
                     }`}
-                    style={{ backgroundColor: c.value }}
-                    title={c.name}
-                  />
+                  >
+                    <span
+                      className={`w-6 h-6 rounded-full transition-all ${
+                        accent === key ? 'ring-2 ring-white ring-offset-2 ring-offset-gray-900 scale-110' : ''
+                      }`}
+                      style={{ backgroundColor: theme.swatch }}
+                    />
+                    <span className={`text-sm font-medium ${accent === key ? 'text-white' : 'text-gray-400'}`}>
+                      {theme.label}
+                    </span>
+                  </button>
                 ))}
               </div>
             </div>
