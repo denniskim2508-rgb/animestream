@@ -18,10 +18,7 @@ import {
   orderBy,
   onSnapshot,
   writeBatch,
-  deleteDoc,
   getDocs,
-  arrayUnion,
-  arrayRemove,
   serverTimestamp,
 } from 'firebase/firestore'
 import { auth, db } from '../firebase'
@@ -141,32 +138,28 @@ export function AuthProvider({ children }) {
     setUser((prev) => ({ ...prev, ...fields }))
   }, [user])
 
-  const toggleFavorite = useCallback(async (animeId) => {
+  const toggleFavorite = useCallback(async (anime) => {
     if (!user) return
-    const isFav = user.favorites.includes(animeId)
-    await updateDoc(doc(db, 'users', user.uid), {
-      favorites: isFav ? arrayRemove(animeId) : arrayUnion(animeId),
-    })
-    setUser((prev) => ({
-      ...prev,
-      favorites: isFav
-        ? prev.favorites.filter((id) => id !== animeId)
-        : [...prev.favorites, animeId],
-    }))
+    const id = typeof anime === 'object' ? anime.id : anime
+    const existing = user.favorites || []
+    const isFav = existing.some((item) => (typeof item === 'object' ? item.id : item) === id)
+    const updated = isFav
+      ? existing.filter((item) => (typeof item === 'object' ? item.id : item) !== id)
+      : [...existing, { id: anime.id, title: anime.title, coverImage: anime.coverImage, episodes: anime.episodes || 0, status: anime.status || null }]
+    await updateDoc(doc(db, 'users', user.uid), { favorites: updated })
+    setUser((prev) => ({ ...prev, favorites: updated }))
   }, [user])
 
-  const toggleWatchlist = useCallback(async (animeId) => {
+  const toggleWatchlist = useCallback(async (anime) => {
     if (!user) return
-    const inList = user.watchlist.includes(animeId)
-    await updateDoc(doc(db, 'users', user.uid), {
-      watchlist: inList ? arrayRemove(animeId) : arrayUnion(animeId),
-    })
-    setUser((prev) => ({
-      ...prev,
-      watchlist: inList
-        ? prev.watchlist.filter((id) => id !== animeId)
-        : [...prev.watchlist, animeId],
-    }))
+    const id = typeof anime === 'object' ? anime.id : anime
+    const existing = user.watchlist || []
+    const isIn = existing.some((item) => (typeof item === 'object' ? item.id : item) === id)
+    const updated = isIn
+      ? existing.filter((item) => (typeof item === 'object' ? item.id : item) !== id)
+      : [...existing, { id: anime.id, title: anime.title, coverImage: anime.coverImage, episodes: anime.episodes || 0, status: anime.status || null }]
+    await updateDoc(doc(db, 'users', user.uid), { watchlist: updated })
+    setUser((prev) => ({ ...prev, watchlist: updated }))
   }, [user])
 
   const getLocalContinueWatching = () => {

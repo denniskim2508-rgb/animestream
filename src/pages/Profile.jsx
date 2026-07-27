@@ -1,12 +1,59 @@
 import { Link, Navigate } from 'react-router-dom'
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { AVATAR_CHARACTERS } from '../data/avatars'
-import { Crown, Calendar, Film, Heart, Clock, ListChecks, Settings, Play, X, Check } from 'lucide-react'
+import { getStatusLabel } from '../data/mockData'
+import { Crown, Calendar, Film, Heart, Clock, ListChecks, Settings, Play, X, Check, Trash2 } from 'lucide-react'
 import ContinueWatchingCard from '../components/ui/ContinueWatchingCard'
 
+function CollectionCard({ item, onRemove }) {
+  const id = typeof item === 'object' ? item.id : item
+  const title = typeof item === 'object' ? item.title : `Anime #${id}`
+  const coverImage = typeof item === 'object' ? item.coverImage : null
+  const episodes = typeof item === 'object' ? item.episodes : null
+  const status = typeof item === 'object' ? item.status : null
+
+  return (
+    <Link to={`/anime/${id}`} className="group block">
+      <div className="bg-surface rounded-xl border border-white/5 overflow-hidden hover:border-white/15 transition-all">
+        <div className="aspect-[3/4] overflow-hidden relative">
+          {coverImage ? (
+            <img src={coverImage} alt={title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+          ) : (
+            <div className="w-full h-full bg-white/5 flex items-center justify-center">
+              <span className="text-gray-600 text-sm">No Image</span>
+            </div>
+          )}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
+          <button
+            onClick={(e) => { e.preventDefault(); e.stopPropagation(); onRemove(id) }}
+            className="absolute top-2 right-2 w-7 h-7 rounded-full bg-black/60 backdrop-blur-sm flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-500/80"
+          >
+            <Trash2 className="w-3.5 h-3.5 text-white" />
+          </button>
+        </div>
+        <div className="p-3">
+          <h3 className="text-sm font-semibold text-white truncate group-hover:text-primary-light transition-colors">{title}</h3>
+          <div className="flex items-center gap-2 mt-1">
+            {episodes > 0 && <span className="text-xs text-gray-400">{episodes} eps</span>}
+            {status && (
+              <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
+                status === 'RELEASING' ? 'bg-green-400/20 text-green-400'
+                : status === 'FINISHED' ? 'bg-blue-400/20 text-blue-400'
+                : 'bg-gray-500/20 text-gray-400'
+              }`}>
+                {getStatusLabel(status)}
+              </span>
+            )}
+          </div>
+        </div>
+      </div>
+    </Link>
+  )
+}
+
 export default function Profile() {
-  const { user, setAvatar, removeContinueWatching } = useAuth()
+  const { user, setAvatar, removeContinueWatching, toggleFavorite, toggleWatchlist } = useAuth()
   const [showAvatarPicker, setShowAvatarPicker] = useState(false)
 
   if (!user) return <Navigate to="/login" replace />
@@ -99,9 +146,12 @@ export default function Profile() {
           <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
             <Heart className="w-5 h-5 text-anime-red" /> Favorites ({(user.favorites || []).length})
           </h2>
-          <p className="text-sm text-gray-500">
-            Click the heart icon on any anime to add it to your favorites.
-          </p>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+            {(user.favorites || []).map((item) => {
+              const id = typeof item === 'object' ? item.id : item
+              return <CollectionCard key={id} item={item} onRemove={toggleFavorite} />
+            })}
+          </div>
         </section>
       )}
 
@@ -110,9 +160,12 @@ export default function Profile() {
           <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
             <ListChecks className="w-5 h-5 text-primary-light" /> My Watchlist ({(user.watchlist || []).length})
           </h2>
-          <p className="text-sm text-gray-500">
-            Click the + icon on any anime to add it to your watchlist.
-          </p>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+            {(user.watchlist || []).map((item) => {
+              const id = typeof item === 'object' ? item.id : item
+              return <CollectionCard key={id} item={item} onRemove={toggleWatchlist} />
+            })}
+          </div>
         </section>
       )}
 

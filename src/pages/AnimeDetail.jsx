@@ -60,8 +60,8 @@ export default function AnimeDetail() {
     )
   }
 
-  const isFav = user?.favorites?.includes(anime.id)
-  const inWatchlist = user?.watchlist?.includes(anime.id)
+  const isFav = user?.favorites?.some((item) => (typeof item === 'object' ? item.id : item) === anime.id)
+  const inWatchlist = user?.watchlist?.some((item) => (typeof item === 'object' ? item.id : item) === anime.id)
   const epCount = anime.episodes || (anime.nextAiringEpisode ? anime.nextAiringEpisode.episode - 1 : 0)
   const watchUrl = `/watch/${anime.id}/1?total=${epCount}&audio=${audioMode}`
   const EP_PAGE_SIZE = 100
@@ -187,14 +187,14 @@ export default function AnimeDetail() {
               {user && (
                 <>
                   <button
-                    onClick={() => toggleWatchlist(anime.id)}
+                    onClick={() => toggleWatchlist(anime)}
                     className="inline-flex items-center gap-2 px-5 py-3 bg-white/10 hover:bg-white/20 text-white font-semibold rounded-full backdrop-blur-sm transition-all active:scale-95"
                   >
                     {inWatchlist ? <Check className="w-5 h-5 text-green-400" /> : <Plus className="w-5 h-5" />}
                     {inWatchlist ? 'In Watchlist' : 'Add to Watchlist'}
                   </button>
                   <button
-                    onClick={() => toggleFavorite(anime.id)}
+                    onClick={() => toggleFavorite(anime)}
                     className="inline-flex items-center gap-2 px-5 py-3 bg-white/10 hover:bg-white/20 text-white font-semibold rounded-full backdrop-blur-sm transition-all active:scale-95"
                   >
                     <Heart className={`w-5 h-5 ${isFav ? 'text-anime-red fill-anime-red' : ''}`} />

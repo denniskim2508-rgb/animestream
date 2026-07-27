@@ -187,8 +187,8 @@ export default function Navbar() {
                       <nav className="py-1.5">
                         {[
                           { icon: User, label: 'Profile', to: '/profile' },
-                          { icon: Play, label: 'Continue Watching', to: '/profile?tab=continue' },
-                          { icon: List, label: 'Watch List', to: '/profile?tab=watchlist' },
+                          { icon: Play, label: 'Continue Watching', to: '/profile' },
+                          { icon: List, label: 'Watch List', to: '/profile' },
                           { icon: Bell, label: 'Notifications', to: '/notifications' },
                           { icon: Download, label: 'List Import', action: () => { setImportOpen(true); setProfileOpen(false) } },
                           { icon: RefreshCw, label: 'AniList Sync', action: () => { setSyncOpen(true); setProfileOpen(false) } },

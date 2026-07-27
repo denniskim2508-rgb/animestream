@@ -7,8 +7,8 @@ export default function AnimeCard({ anime, size = 'normal' }) {
   const [imageLoaded, setImageLoaded] = useState(false)
   const { user, toggleFavorite, toggleWatchlist } = useAuth()
 
-  const isFav = user?.favorites?.includes(anime.id)
-  const inWatchlist = user?.watchlist?.includes(anime.id)
+  const isFav = user?.favorites?.some((item) => (typeof item === 'object' ? item.id : item) === anime.id)
+  const inWatchlist = user?.watchlist?.some((item) => (typeof item === 'object' ? item.id : item) === anime.id)
 
   const sizeClasses = {
     small: 'w-[140px] sm:w-[160px]',
@@ -55,7 +55,7 @@ export default function AnimeCard({ anime, size = 'normal' }) {
                     onClick={(e) => {
                       e.preventDefault()
                       e.stopPropagation()
-                      toggleWatchlist(anime.id)
+                      toggleWatchlist(anime)
                     }}
                     className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 transition-colors"
                   >
@@ -65,7 +65,7 @@ export default function AnimeCard({ anime, size = 'normal' }) {
                     onClick={(e) => {
                       e.preventDefault()
                       e.stopPropagation()
-                      toggleFavorite(anime.id)
+                      toggleFavorite(anime)
                     }}
                     className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 transition-colors"
                   >
