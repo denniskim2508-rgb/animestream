@@ -1,7 +1,7 @@
 import { useParams } from 'react-router-dom'
 import { useState, useEffect, useCallback } from 'react'
 import { fetchByGenre } from '../api/anilist'
-import { getAllGenres, getGenreIcon } from '../data/mockData'
+import { getAllGenres } from '../data/mockData'
 import AnimeCard from '../components/ui/AnimeCard'
 
 export default function GenrePage() {
@@ -10,7 +10,6 @@ export default function GenrePage() {
   const genre = allGenres.find((g) => g.id === genreId)
 
   const genreName = genre?.name || genreId.replace(/([A-Z])/g, ' $1').replace(/^./, (s) => s.toUpperCase())
-  const genreIcon = getGenreIcon(genreName)
 
   const [anime, setAnime] = useState([])
   const [loading, setLoading] = useState(true)
@@ -44,12 +43,9 @@ export default function GenrePage() {
 
   return (
     <div className="min-h-screen bg-gray-950 pt-24 pb-16 px-4 sm:px-6 lg:px-8 max-w-[1440px] mx-auto">
-      <div className="flex items-center gap-4 mb-8">
-        <span className="text-5xl">{genreIcon}</span>
-        <div>
-          <h1 className="text-3xl sm:text-4xl font-black text-white">{genreName}</h1>
-          {!loading && <p className="text-gray-400 text-sm mt-1">{anime.length} anime</p>}
-        </div>
+      <div className="mb-8">
+        <h1 className="text-3xl sm:text-4xl font-black text-white">{genreName}</h1>
+        {!loading && <p className="text-gray-400 text-sm mt-1">{anime.length} anime</p>}
       </div>
 
       {loading && anime.length === 0 ? (
