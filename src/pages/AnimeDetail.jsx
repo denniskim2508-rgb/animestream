@@ -90,7 +90,7 @@ export default function AnimeDetail() {
 
   return (
     <div>
-      <div className="relative w-full h-[50vh] sm:h-[60vh] max-h-[700px] overflow-hidden">
+      <div className="relative w-full h-60 md:h-[550px] overflow-hidden">
         <img
           src={anime.bannerImage || anime.coverImage}
           alt={anime.title}
@@ -98,12 +98,12 @@ export default function AnimeDetail() {
           onError={(e) => { e.target.src = anime.coverImage }}
         />
         <div className="absolute inset-0 bg-gradient-to-t from-gray-950 via-gray-950/60 to-transparent" />
-        <div className="absolute inset-0 bg-gradient-to-r from-gray-950/80 to-transparent hidden sm:block" />
+        <div className="absolute inset-0 bg-gradient-to-r from-gray-950/80 to-transparent hidden md:block" />
       </div>
 
-      <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 -mt-48 relative z-10">
-        <div className="flex flex-col md:flex-row gap-6 md:gap-10">
-          <div className="w-48 sm:w-56 md:w-64 shrink-0 mx-auto md:mx-0">
+      <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 -mt-28 md:-mt-48 relative z-10">
+        <div className="flex flex-col md:flex-row gap-4 md:gap-10">
+          <div className="w-32 md:w-56 shrink-0 mx-auto md:mx-0">
             <div className="aspect-[3/4] rounded-xl overflow-hidden shadow-2xl shadow-black/50 border-2 border-white/10">
               <img
                 src={anime.coverImage}
@@ -113,8 +113,18 @@ export default function AnimeDetail() {
             </div>
           </div>
 
-          <div className="flex-1 min-w-0 pt-4 md:pt-8">
-            <div className="flex flex-wrap gap-2 mb-3">
+          <div className="flex-1 min-w-0 max-w-full pt-2 md:pt-8">
+            <h1 className="text-2xl sm:text-3xl md:text-5xl font-black text-white mb-1 leading-tight text-center md:text-left">
+              {anime.title}
+            </h1>
+            {anime.romajiTitle && anime.romajiTitle !== anime.title && (
+              <p className="text-sm md:text-lg text-gray-400 mb-0.5 md:mb-1 font-medium text-center md:text-left">{anime.romajiTitle}</p>
+            )}
+            {anime.japaneseTitle && (
+              <p className="text-xs md:text-base text-gray-500 mb-3 md:mb-4 text-center md:text-left">{anime.japaneseTitle}</p>
+            )}
+
+            <div className="flex flex-wrap items-center justify-center md:justify-start gap-2 mb-3">
               {anime.genresRaw.slice(0, 4).map((g) => (
                 <Link key={g} to={`/genres/${g.toLowerCase().replace(/ /g, '')}`}>
                   <GenreTag genreName={g} size="md" />
@@ -122,17 +132,7 @@ export default function AnimeDetail() {
               ))}
             </div>
 
-            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black text-white mb-1 leading-tight">
-              {anime.title}
-            </h1>
-            {anime.romajiTitle && anime.romajiTitle !== anime.title && (
-              <p className="text-lg text-gray-400 mb-1 font-medium">{anime.romajiTitle}</p>
-            )}
-            {anime.japaneseTitle && (
-              <p className="text-base text-gray-500 mb-4">{anime.japaneseTitle}</p>
-            )}
-
-            <div className="flex flex-wrap items-center gap-3 mb-5">
+            <div className="flex flex-wrap items-center justify-center md:justify-start gap-2 md:gap-3 mb-4">
               {hasSub && (
                 <span className="px-2.5 py-0.5 rounded-md text-xs font-bold bg-primary/20 text-primary-light border border-primary/30">SUB</span>
               )}
@@ -140,33 +140,33 @@ export default function AnimeDetail() {
                 <span className="px-2.5 py-0.5 rounded-md text-xs font-bold bg-cyan-500/20 text-cyan-400 border border-cyan-500/30">DUB</span>
               )}
               {anime.rating != null && (
-                <div className="flex items-center gap-1.5">
-                  <Star className="w-5 h-5 text-yellow-400 fill-yellow-400" />
-                  <span className="text-xl font-bold text-white">{anime.rating}</span>
+                <div className="flex items-center gap-1">
+                  <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />
+                  <span className="text-base font-bold text-white">{anime.rating}</span>
                 </div>
               )}
               {anime.releaseYear && (
-                <span className="text-sm text-gray-400 flex items-center gap-1">
-                  <Calendar className="w-4 h-4" /> {anime.releaseYear}
+                <span className="text-xs md:text-sm text-gray-400 flex items-center gap-1">
+                  <Calendar className="w-3.5 h-3.5" /> {anime.releaseYear}
                 </span>
               )}
               {epCount > 0 && (
-                <span className="text-sm text-gray-400 flex items-center gap-1">
-                  <Film className="w-4 h-4" /> {epCount} Episodes
+                <span className="text-xs md:text-sm text-gray-400 flex items-center gap-1">
+                  <Film className="w-3.5 h-3.5" /> {epCount} Episodes
                 </span>
               )}
               {anime.duration && (
-                <span className="text-sm text-gray-400 flex items-center gap-1">
-                  <Clock className="w-4 h-4" /> {anime.duration} min/ep
+                <span className="text-xs md:text-sm text-gray-400 flex items-center gap-1">
+                  <Clock className="w-3.5 h-3.5" /> {anime.duration} min/ep
                 </span>
               )}
               {anime.format && (
-                <span className="text-sm text-gray-400 flex items-center gap-1">
-                  <Tv className="w-4 h-4" /> {getFormatLabel(anime.format)}
+                <span className="text-xs md:text-sm text-gray-400 flex items-center gap-1">
+                  <Tv className="w-3.5 h-3.5" /> {getFormatLabel(anime.format)}
                 </span>
               )}
               {anime.status && (
-                <span className={`px-2.5 py-0.5 rounded-md text-xs font-bold ${
+                <span className={`px-2 py-0.5 rounded-md text-[10px] md:text-xs font-bold ${
                   anime.status === 'RELEASING' ? 'bg-green-400/20 text-green-400 border border-green-400/30'
                   : anime.status === 'FINISHED' ? 'bg-blue-400/20 text-blue-400 border border-blue-400/30'
                   : 'bg-gray-500/20 text-gray-400 border border-gray-500/30'
@@ -176,11 +176,10 @@ export default function AnimeDetail() {
               )}
             </div>
 
-            <div className="flex items-center gap-2 mb-5">
-              <span className="text-xs text-gray-500 uppercase tracking-wider mr-1">Audio</span>
+            <div className="w-full flex gap-2 mb-4">
               <button
                 onClick={() => setAudioMode('sub')}
-                className={`px-4 py-1.5 rounded-full text-sm font-semibold transition-all ${
+                className={`flex-1 h-11 rounded-xl text-sm font-semibold transition-all ${
                   audioMode === 'sub'
                     ? 'bg-primary text-white shadow-lg shadow-primary/25'
                     : 'bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white'
@@ -190,7 +189,7 @@ export default function AnimeDetail() {
               </button>
               <button
                 onClick={() => setAudioMode('dub')}
-                className={`px-4 py-1.5 rounded-full text-sm font-semibold transition-all ${
+                className={`flex-1 h-11 rounded-xl text-sm font-semibold transition-all ${
                   audioMode === 'dub'
                     ? 'bg-primary text-white shadow-lg shadow-primary/25'
                     : 'bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white'
@@ -201,13 +200,13 @@ export default function AnimeDetail() {
             </div>
 
             {anime.description && (
-              <ShowMore text={anime.description} lines={4} className="mb-6 max-w-3xl" />
+              <ShowMore text={anime.description} lines={4} className="mb-5 text-[15px] md:text-base leading-relaxed md:leading-normal max-w-3xl" />
             )}
 
-            <div className="flex flex-wrap items-center gap-3 mb-4">
+            <div className="flex flex-wrap items-center gap-3 mb-4 max-w-full max-sm:flex-col max-sm:w-full">
               <Link
                 to={watchUrl}
-                className="inline-flex items-center gap-2 px-6 py-3 bg-primary hover:bg-primary-dark text-white font-semibold rounded-full transition-all hover:shadow-lg hover:shadow-primary/25 active:scale-95"
+                className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-primary hover:bg-primary-dark text-white font-semibold rounded-full transition-all hover:shadow-lg hover:shadow-primary/25 active:scale-95 max-sm:w-full"
               >
                 <Play className="w-5 h-5 fill-white" /> Watch Now
                 <span className="text-xs opacity-70 uppercase">{audioMode === 'sub' ? 'JP' : 'EN'}</span>
@@ -216,14 +215,14 @@ export default function AnimeDetail() {
                 <>
                   <button
                     onClick={() => toggleWatchlist(anime)}
-                    className="inline-flex items-center gap-2 px-5 py-3 bg-white/10 hover:bg-white/20 text-white font-semibold rounded-full backdrop-blur-sm transition-all active:scale-95"
+                    className="inline-flex items-center justify-center gap-2 px-5 py-3 bg-white/10 hover:bg-white/20 text-white font-semibold rounded-full backdrop-blur-sm transition-all active:scale-95 max-sm:w-full"
                   >
                     {inWatchlist ? <Check className="w-5 h-5 text-green-400" /> : <Plus className="w-5 h-5" />}
                     {inWatchlist ? 'In Watchlist' : 'Add to Watchlist'}
                   </button>
                   <button
                     onClick={() => toggleFavorite(anime)}
-                    className="inline-flex items-center gap-2 px-5 py-3 bg-white/10 hover:bg-white/20 text-white font-semibold rounded-full backdrop-blur-sm transition-all active:scale-95"
+                    className="inline-flex items-center justify-center gap-2 px-5 py-3 bg-white/10 hover:bg-white/20 text-white font-semibold rounded-full backdrop-blur-sm transition-all active:scale-95 max-sm:w-full"
                   >
                     <Heart className={`w-5 h-5 ${isFav ? 'text-anime-red fill-anime-red' : ''}`} />
                     {isFav ? 'Favorited' : 'Favorite'}
@@ -231,12 +230,6 @@ export default function AnimeDetail() {
                 </>
               )}
             </div>
-
-              {anime.studio && (
-              <p className="text-sm text-gray-500">
-                Studio: <span className="text-gray-400">{anime.studio}</span>
-              </p>
-            )}
           </div>
         </div>
 
