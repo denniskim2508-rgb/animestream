@@ -107,7 +107,7 @@ export default function Browse() {
               }`}
               style={selectedGenre === g.name ? { backgroundColor: `${g.color}30`, color: g.color } : {}}
             >
-              {g.icon} {g.name}
+              {g.name}
             </button>
           ))}
         </div>
