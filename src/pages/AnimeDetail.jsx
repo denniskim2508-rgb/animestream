@@ -2,6 +2,7 @@ import { useParams, Link } from 'react-router-dom'
 import { useState, useEffect } from 'react'
 import { Star, Play, Plus, Check, Heart, Clock, Calendar, Film, Tv } from 'lucide-react'
 import { fetchMediaById, fetchRecommendations } from '../api/anilist'
+import { getAnimeDetails, getEpisodes } from '../api/anikoto'
 import { useAuth } from '../context/AuthContext'
 import { getStatusLabel, getFormatLabel } from '../data/mockData'
 import GenreTag from '../components/ui/GenreTag'
@@ -17,6 +18,8 @@ export default function AnimeDetail() {
   const [error, setError] = useState(null)
   const [activeTab, setActiveTab] = useState('overview')
   const [epPage, setEpPage] = useState(0)
+  const [hasSub, setHasSub] = useState(false)
+  const [hasDub, setHasDub] = useState(false)
   const { user, toggleFavorite, toggleWatchlist, audioMode, setAudioMode } = useAuth()
 
   useEffect(() => {
@@ -43,6 +46,23 @@ export default function AnimeDetail() {
         }
       })
 
+    return () => { cancelled = true }
+  }, [id])
+
+  useEffect(() => {
+    if (!id) return
+    let cancelled = false
+    getAnimeDetails(id)
+      .then(async (details) => {
+        if (cancelled || !details?.slug) return
+        const eps = await getEpisodes(details.slug)
+        if (cancelled) return
+        const sub = eps.some((e) => e.hasSub)
+        const dub = eps.some((e) => e.hasDub)
+        setHasSub(sub)
+        setHasDub(dub)
+      })
+      .catch(() => {})
     return () => { cancelled = true }
   }, [id])
 
@@ -111,6 +131,12 @@ export default function AnimeDetail() {
             )}
 
             <div className="flex flex-wrap items-center gap-3 mb-5">
+              {hasSub && (
+                <span className="px-2.5 py-0.5 rounded-md text-xs font-bold bg-primary/20 text-primary-light border border-primary/30">SUB</span>
+              )}
+              {hasDub && (
+                <span className="px-2.5 py-0.5 rounded-md text-xs font-bold bg-cyan-500/20 text-cyan-400 border border-cyan-500/30">DUB</span>
+              )}
               {anime.rating != null && (
                 <div className="flex items-center gap-1.5">
                   <Star className="w-5 h-5 text-yellow-400 fill-yellow-400" />
