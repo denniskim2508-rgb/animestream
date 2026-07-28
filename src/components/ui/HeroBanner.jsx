@@ -30,7 +30,7 @@ export default function HeroBanner({ animeList }) {
   const anime = animeList[current]
 
   return (
-    <div className="relative w-full h-[70vh] min-h-[500px] max-h-[800px] overflow-hidden">
+    <div className="relative w-full h-[55vh] min-h-[400px] max-h-[800px] overflow-hidden">
       {animeList.map((a, i) => (
         <div
           key={a.id}

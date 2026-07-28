@@ -234,7 +234,7 @@ export default function AnimeDetail() {
         </div>
 
         <div className="mt-12">
-          <div className="flex items-center gap-1 border-b border-white/10 mb-6">
+          <div className="flex items-center gap-1 border-b border-white/10 mb-6 overflow-x-auto scrollbar-hide">
             {['overview', 'episodes', 'trailer', 'relations', 'characters'].map((tab) => (
               <button
                 key={tab}

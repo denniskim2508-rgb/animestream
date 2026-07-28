@@ -81,10 +81,10 @@ export default function Footer() {
         </div>
 
         <div className="pt-8 border-t border-white/5 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <p className="text-xs text-gray-500">
+          <p className="text-xs text-gray-500 shrink-0">
             &copy; 2026 Kaisen X Anime. All rights reserved.
           </p>
-          <p className="text-xs text-gray-600">
+          <p className="text-xs text-gray-600 text-center sm:text-left max-w-full break-words">
             Disclaimer: Kaisen X Anime respects the intellectual property rights of content owners.
             All trademarks, logos, artwork, images, videos, and other copyrighted materials displayed
             on this platform remain the property of their respective owners. Where applicable, Kaisen X

@@ -110,7 +110,7 @@ export default function Profile() {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-10">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-10">
           {[
             { icon: Film, label: 'Watched', value: (user.continueWatching || []).length, color: 'text-accent' },
             { icon: Heart, label: 'Favorites', value: (user.favorites || []).length, color: 'text-anime-red' },

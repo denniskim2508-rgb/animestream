@@ -138,7 +138,7 @@ export default function Settings() {
           <div className="space-y-5">
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-3">Theme Accent</label>
-              <div className="flex gap-3">
+              <div className="flex flex-wrap gap-3">
                 {Object.entries(THEMES).map(([key, theme]) => (
                   <button
                     key={key}
@@ -240,7 +240,7 @@ export default function Settings() {
             <Globe className="w-5 h-5 text-primary" /> Language
           </h2>
           <p className="text-xs text-gray-500 mb-3">This feature is currently in development.</p>
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+          <div className="grid grid-cols-2 gap-2">
             {LANGUAGES.map((lang) => (
               <button
                 key={lang.code}

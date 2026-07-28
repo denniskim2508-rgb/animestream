@@ -89,10 +89,10 @@ export default function Browse() {
       <h1 className="text-3xl font-black text-white mb-6">Browse Anime</h1>
 
       <div className="space-y-4 mb-8">
-        <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide pb-2 -mx-4 px-4">
           <button
             onClick={() => setSelectedGenre('')}
-            className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
+            className={`shrink-0 px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
               !selectedGenre ? 'bg-primary text-white' : 'bg-white/5 text-gray-400 hover:text-white hover:bg-white/10'
             }`}
           >
@@ -102,7 +102,7 @@ export default function Browse() {
             <button
               key={g.id}
               onClick={() => setSelectedGenre(g.name)}
-              className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
+              className={`shrink-0 px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
                 selectedGenre === g.name ? 'text-white' : 'text-gray-400 hover:text-white bg-white/5 hover:bg-white/10'
               }`}
               style={selectedGenre === g.name ? { backgroundColor: `${g.color}30`, color: g.color } : {}}
@@ -112,13 +112,13 @@ export default function Browse() {
           ))}
         </div>
 
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2">
           <div className="flex items-center gap-2">
-            <SlidersHorizontal className="w-4 h-4 text-gray-400" />
+            <SlidersHorizontal className="w-4 h-4 text-gray-400 shrink-0" />
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
-              className="bg-surface border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary/50"
+              className="bg-surface border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary/50 max-w-[140px] sm:max-w-none"
             >
               {SORT_OPTIONS.map((o) => (
                 <option key={o.value} value={o.value}>{o.label}</option>

@@ -159,7 +159,7 @@ export default function Navbar() {
                     <div
                       className="absolute right-0 top-full mt-2 z-50 overflow-hidden"
                       style={{
-                        width: 260,
+                        width: 'min(260px, calc(100vw - 32px))',
                         background: '#1E293B',
                         border: '1px solid rgba(255,255,255,.08)',
                         borderRadius: 14,
@@ -239,13 +239,13 @@ export default function Navbar() {
               <div className="flex items-center gap-2">
                 <Link
                   to="/login"
-                  className="hidden sm:inline-flex px-4 py-2 text-sm font-medium text-gray-300 hover:text-white transition-colors"
+                  className="px-4 py-2 text-sm font-medium text-gray-300 hover:text-white transition-colors"
                 >
                   Sign In
                 </Link>
                 <Link
                   to="/signup"
-                  className="px-4 py-2 text-sm font-semibold bg-primary hover:bg-primary-dark text-white rounded-full transition-colors"
+                  className="px-3 sm:px-4 py-2 text-sm font-semibold bg-primary hover:bg-primary-dark text-white rounded-full transition-colors whitespace-nowrap"
                 >
                   Sign Up
                 </Link>
