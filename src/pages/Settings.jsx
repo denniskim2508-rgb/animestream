@@ -239,6 +239,7 @@ export default function Settings() {
           <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
             <Globe className="w-5 h-5 text-primary" /> Language
           </h2>
+          <p className="text-xs text-gray-500 mb-3">This feature is currently in development.</p>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
             {LANGUAGES.map((lang) => (
               <button
