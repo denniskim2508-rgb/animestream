@@ -3,18 +3,9 @@ import { ArrowRight } from 'lucide-react'
 
 export default function About() {
   return (
-    <div className="min-h-screen bg-[#09090B]">
-      <section className="relative max-w-[1400px] mx-auto grid grid-cols-1 lg:grid-cols-2 gap-10 items-center px-4 sm:px-6 lg:px-8 py-20">
-        <div className="absolute inset-0 overflow-hidden z-0">
-          <div
-            className="absolute inset-0 about-hero-bg"
-            style={{
-              backgroundImage: 'url(/jujutsu-bg.jpg)',
-            }}
-          />
-          <div className="absolute inset-0 bg-black/50" />
-        </div>
-        <div className="relative z-[1]">
+    <div className="min-h-screen bg-[#0b0710]">
+      <section className="max-w-[1400px] mx-auto grid grid-cols-1 lg:grid-cols-2 gap-10 items-center px-4 sm:px-6 lg:px-8 py-20">
+        <div>
           <h1 className="text-5xl sm:text-6xl font-extrabold tracking-tight text-white">
             ABOUT US
           </h1>
@@ -34,6 +25,17 @@ export default function About() {
           >
             Explore Anime <ArrowRight className="w-4 h-4" />
           </Link>
+        </div>
+
+        <div className="collage-wrap relative rounded-md overflow-hidden h-[340px] lg:h-[420px]">
+          <img
+            src="/collage.jpeg"
+            alt="Anime collage"
+            className="collage-img w-full h-full object-cover relative z-[1]"
+          />
+          <div className="collage-glow absolute inset-0 z-[2] pointer-events-none rounded-md" />
+          <div className="collage-sweep absolute inset-0 z-[3] pointer-events-none rounded-md" />
+          <div className="collage-gradient absolute inset-0 z-[2] pointer-events-none rounded-md" />
         </div>
       </section>
 
