@@ -54,8 +54,10 @@ export default function AnimeDetail() {
     let cancelled = false
     getAnimeDetails(id)
       .then(async (details) => {
-        if (cancelled || !details?.slug) return
-        const eps = await getEpisodes(details.slug)
+        const slug = details?.data?.id || details?.slug || details?.id
+        if (cancelled || !slug) return
+        const res = await getEpisodes(slug)
+        const eps = Array.isArray(res) ? res : (res?.data || res?.episodes || [])
         if (cancelled) return
         const sub = eps.some((e) => e.hasSub)
         const dub = eps.some((e) => e.hasDub)
