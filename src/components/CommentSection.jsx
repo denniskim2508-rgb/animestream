@@ -379,7 +379,7 @@ function CommentItem({ c, user, animeId, episode, onPin, pinnedId, hideSpoilers 
   )
 }
 
-export default function CommentSection({ animeId, episode }) {
+export default function CommentSection({ animeId, episode, animeTitle, animeCover }) {
   const { user, addNotification } = useAuth()
   const [comments, setComments] = useState([])
   const [loading, setLoading] = useState(true)
@@ -453,6 +453,8 @@ export default function CommentSection({ animeId, episode }) {
         likes: 0, dislikes: 0, likedBy: {}, dislikedBy: {},
         pinned: false, pinnedBy: null, containsSpoiler,
         badges: user?.badges || [],
+        animeId: String(animeId), episode: Number(episode),
+        animeTitle: animeTitle || '', animeCover: animeCover || '',
       })
       if (!user) localStorage.setItem('comment_name', displayName)
       setText('')

@@ -792,7 +792,7 @@ export default function VideoPlayer() {
             </div>
           )}
 
-          <CommentSection animeId={animeId} episode={currentEp} />
+              <CommentSection animeId={animeId} episode={currentEp} animeTitle={anime?.title || ''} animeCover={anime?.coverImage || ''} />
         </div>
       </div>
     </div>

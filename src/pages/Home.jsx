@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import HeroBanner from '../components/ui/HeroBanner'
 import AnimeCarousel from '../components/ui/AnimeCarousel'
 import ContinueWatchingCard from '../components/ui/ContinueWatchingCard'
+import CommunityComments from '../components/CommunityComments'
 import { SkeletonBanner, SkeletonCarousel } from '../components/ui/Skeleton'
 import { fetchHomepageData, fetchPopularMovies, fetchTopRatedMovies } from '../api/anilist'
 import { fetchRecentEpisodes } from '../api/anikoto'
@@ -92,6 +93,8 @@ export default function Home() {
             </div>
           </section>
         )}
+
+        <CommunityComments />
 
         {isLoading ? (
           <SkeletonCarousel />
