@@ -38,6 +38,14 @@ export async function resolveStream(anilistId, episode, audioMode) {
   return apiFetch(`/api/stream/resolve?${params}`)
 }
 
+export async function fetchEpisodeAvailability(anilistId, episode) {
+  const params = new URLSearchParams({
+    anilistId: String(anilistId),
+    episode: String(episode),
+  })
+  return apiFetch(`/api/stream/availability?${params}`)
+}
+
 export async function fetchRecentEpisodes() {
   const items = await apiFetch('/api/anidap/recents')
   return items.map(item => ({

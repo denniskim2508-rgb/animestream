@@ -97,6 +97,28 @@ app.get('/api/anidap/recents', async (_req, res) => {
 })
 // Takes anilistId + ep + type, finds slug, gets sources, returns m3u8
 
+app.get('/api/stream/availability', async (req, res) => {
+  const { anilistId, episode } = req.query
+  if (!anilistId || !episode) {
+    return res.status(400).json({ error: 'anilistId and episode are required' })
+  }
+  try {
+    const details = await anidapFetch(`${ANIDAP_MAIN}/api/anime/${anilistId}`)
+    const slug = details?.data?.id
+    if (!slug) return res.json({ hasSub: false, hasDub: false })
+    const servers = await anidapFetch(
+      `${ANIDAP_CHAD}/rest/api/servers?id=${slug}&epNum=${Number(episode)}`
+    )
+    res.json({
+      hasSub: !!(servers.subProviders?.length),
+      hasDub: !!(servers.dubProviders?.length),
+    })
+  } catch (err) {
+    console.error('[availability] Error:', err.message)
+    res.json({ hasSub: false, hasDub: false })
+  }
+})
+
 app.get('/api/stream/resolve', async (req, res) => {
   const { anilistId, episode, audio } = req.query
   if (!anilistId || !episode) {
@@ -150,6 +172,8 @@ app.get('/api/stream/resolve', async (req, res) => {
       episodeTitle,
       totalEpisodes,
       slug,
+      hasSub: !!(servers.subProviders?.length),
+      hasDub: !!(servers.dubProviders?.length),
     })
   } catch (err) {
     console.error('[stream] Error:', err.message)

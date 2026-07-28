@@ -3,7 +3,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import Hls from 'hls.js'
 import { ChevronLeft, Play, Pause, List, SkipForward, SkipBack, AlertCircle, Loader2, RefreshCw, Tv, Volume2, VolumeX, RotateCcw, Maximize, Minimize, Search } from 'lucide-react'
 import { fetchMediaById } from '../api/anilist'
-import { resolveStream, getServers, getSources } from '../api/anikoto'
+import { resolveStream, getServers, getSources, fetchEpisodeAvailability } from '../api/anikoto'
 import { useAuth } from '../context/AuthContext'
 import CommentSection from '../components/CommentSection'
 import NextEpisodeOverlay from '../components/ui/NextEpisodeOverlay'
@@ -37,6 +37,8 @@ export default function VideoPlayer() {
   const [retryKey, setRetryKey] = useState(0)
   const [providerError, setProviderError] = useState(null)
   const [cdnHeaders, setCdnHeaders] = useState({})
+  const [hasSub, setHasSub] = useState(true)
+  const [hasDub, setHasDub] = useState(false)
   const { user, addContinueWatching, updateContinueWatchingProgress, removeContinueWatching, addWatchMinutes } = useAuth()
 
   const [showNextEpisode, setShowNextEpisode] = useState(false)
@@ -193,6 +195,19 @@ export default function VideoPlayer() {
   }, [animeId, currentEp, streamData])
 
   useEffect(() => {
+    if (!animeId || !currentEp) return
+    let cancelled = false
+    fetchEpisodeAvailability(animeId, currentEp)
+      .then((avail) => {
+        if (cancelled) return
+        setHasSub(!!avail.hasSub)
+        setHasDub(!!avail.hasDub)
+      })
+      .catch(() => {})
+    return () => { cancelled = true }
+  }, [animeId, currentEp])
+
+  useEffect(() => {
     if (!animeId) return
     let cancelled = false
     setLoading(true)
@@ -222,6 +237,8 @@ export default function VideoPlayer() {
           setProviders(result.providers || [])
           setCdnHeaders(result.cdnHeaders || {})
           if (result.totalEpisodes && result.totalEpisodes > totalEpisodes) setTotalEpisodes(result.totalEpisodes)
+          if (result.hasSub != null) setHasSub(result.hasSub)
+          if (result.hasDub != null) setHasDub(result.hasDub)
           setLoading(false)
         } catch (err) {
           if (cancelled) return
@@ -243,6 +260,15 @@ export default function VideoPlayer() {
       if (elapsed > 0.5) addWatchMinutes(Math.round(elapsed))
     }
   }, [animeId, currentEp, audioMode, retryKey])
+
+  useEffect(() => {
+    if (hasSub && hasDub) return
+    if (audioMode === 'sub' && !hasSub && hasDub) {
+      navigate(`/watch/${animeId}/${currentEp}?total=${totalEpisodes}&audio=dub`, { replace: true })
+    } else if (audioMode === 'dub' && !hasDub && hasSub) {
+      navigate(`/watch/${animeId}/${currentEp}?total=${totalEpisodes}&audio=sub`, { replace: true })
+    }
+  }, [hasSub, hasDub, audioMode, animeId, currentEp, totalEpisodes, navigate])
 
   async function switchProvider(providerId) {
     if (!streamData?.slug || providerId === activeProvider) return
@@ -636,27 +662,55 @@ export default function VideoPlayer() {
 
       <div className="flex-1 bg-gray-950 p-4 sm:p-6">
         <div className="max-w-[1440px] mx-auto">
+          {!hasSub && !hasDub && (
+            <div className="mb-4 px-4 py-3 bg-yellow-500/10 border border-yellow-500/30 rounded-lg flex items-center gap-3">
+              <AlertCircle className="w-5 h-5 text-yellow-400 shrink-0" />
+              <p className="text-sm text-yellow-300">This episode is not available yet.</p>
+            </div>
+          )}
           <div className="flex items-center gap-3 mb-4">
-            <Link
-              to={`/watch/${animeId}/${currentEp}?total=${totalEpisodes}&audio=sub`}
-              className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition-all ${
-                audioMode === 'sub'
-                  ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/30'
-                  : 'bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white'
-              }`}
-            >
-              Sub
-            </Link>
-            <Link
-              to={`/watch/${animeId}/${currentEp}?total=${totalEpisodes}&audio=dub`}
-              className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition-all ${
-                audioMode === 'dub'
-                  ? 'bg-orange-500 text-white shadow-lg shadow-orange-500/30'
-                  : 'bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white'
-              }`}
-            >
-              Dub
-            </Link>
+            <div className="relative group/sub">
+              {!hasSub && <div className="absolute inset-0 z-10 cursor-not-allowed rounded-lg" />}
+              <Link
+                to={hasSub ? `/watch/${animeId}/${currentEp}?total=${totalEpisodes}&audio=sub` : undefined}
+                className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition-all relative z-0 ${
+                  !hasSub
+                    ? 'bg-white/5 text-gray-600 opacity-50'
+                    : audioMode === 'sub'
+                      ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/30'
+                      : 'bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white'
+                }`}
+              >
+                Sub
+              </Link>
+              {!hasSub && (
+                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-gray-900 text-white text-xs rounded-lg whitespace-nowrap opacity-0 group-hover/sub:opacity-100 pointer-events-none transition-opacity shadow-lg border border-white/10 z-50">
+                  Japanese subtitles are not available yet.
+                  <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 w-2 h-2 bg-gray-900 rotate-45 border-r border-b border-white/10" />
+                </div>
+              )}
+            </div>
+            <div className="relative group/dub">
+              {!hasDub && <div className="absolute inset-0 z-10 cursor-not-allowed rounded-lg" />}
+              <Link
+                to={hasDub ? `/watch/${animeId}/${currentEp}?total=${totalEpisodes}&audio=dub` : undefined}
+                className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition-all relative z-0 ${
+                  !hasDub
+                    ? 'bg-white/5 text-gray-600 opacity-50'
+                    : audioMode === 'dub'
+                      ? 'bg-orange-500 text-white shadow-lg shadow-orange-500/30'
+                      : 'bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white'
+                }`}
+              >
+                Dub
+              </Link>
+              {!hasDub && (
+                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-gray-900 text-white text-xs rounded-lg whitespace-nowrap opacity-0 group-hover/dub:opacity-100 pointer-events-none transition-opacity shadow-lg border border-white/10 z-50">
+                  English dub is not available yet.
+                  <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 w-2 h-2 bg-gray-900 rotate-45 border-r border-b border-white/10" />
+                </div>
+              )}
+            </div>
           </div>
 
           <div className="flex items-center gap-4 mb-4">
