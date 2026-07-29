@@ -44,6 +44,7 @@ export default function VideoPlayer() {
   const [showNextEpisode, setShowNextEpisode] = useState(false)
   const [nextEpLoading, setNextEpLoading] = useState(false)
   const nextEpTriggeredRef = useRef(false)
+  const hasNavigatedRef = useRef(false)
   const watchStartRef = useRef(Date.now())
   const lastSaveRef = useRef(0)
   const resumeSetRef = useRef(false)
@@ -164,7 +165,7 @@ export default function VideoPlayer() {
       if (!video.duration || video.duration <= 0 || !isFinite(video.duration)) return
       if (video.currentTime < 30) return
       if (video.currentTime >= video.duration * 0.95) {
-        removeContinueWatching(animeId, currentEp)
+        removeContinueWatching(animeId)
         return
       }
       updateContinueWatchingProgress(animeId, currentEp, video.currentTime, video.duration)
@@ -431,6 +432,7 @@ export default function VideoPlayer() {
 
   useEffect(() => {
     nextEpTriggeredRef.current = false
+    hasNavigatedRef.current = false
     setShowNextEpisode(false)
     setNextEpLoading(false)
   }, [animeId, currentEp, audioMode])
@@ -438,8 +440,9 @@ export default function VideoPlayer() {
   const [nextCountdown, setNextCountdown] = useState(5)
 
   useEffect(() => {
-    if (!showNextEpisode || nextEpLoading) return
+    if (!showNextEpisode || nextEpLoading || hasNavigatedRef.current) return
     if (nextCountdown <= 0) {
+      hasNavigatedRef.current = true
       navigate(`/watch/${animeId}/${currentEp + 1}?total=${totalEpisodes}&audio=${audioMode}`)
       return
     }

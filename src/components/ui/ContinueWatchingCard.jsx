@@ -81,7 +81,7 @@ export default function ContinueWatchingCard({ item, onRemove }) {
           onClick={(e) => {
             e.preventDefault()
             e.stopPropagation()
-            onRemove(item.animeId, item.episode)
+            onRemove(item.animeId)
           }}
           className="absolute -top-1 -right-1 w-6 h-6 rounded-full bg-gray-900/90 border border-white/10 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-500/80 z-10"
           title="Remove"

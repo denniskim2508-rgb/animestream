@@ -47,14 +47,12 @@ export default function Home() {
   }, [])
 
   useEffect(() => {
-    if (user?.continueWatching?.length) {
-      setCwList(user.continueWatching)
-    } else {
-      try {
-        const guest = JSON.parse(localStorage.getItem('cw_guest') || '[]')
-        setCwList(guest)
-      } catch { setCwList([]) }
-    }
+    const raw = user?.continueWatching?.length
+      ? user.continueWatching
+      : (() => { try { return JSON.parse(localStorage.getItem('cw_guest') || '[]') } catch { return [] } })()
+    const valid = raw.filter((e) => e.duration > 0 && e.currentTime > 0 && e.currentTime < e.duration * 0.95)
+      .sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0))
+    setCwList(valid)
   }, [user?.continueWatching])
 
   const heroAnime = home?.trending?.length ? home.trending : home?.popular?.length ? home.popular : home?.topRated
@@ -84,7 +82,7 @@ export default function Home() {
               <div className="flex gap-3 overflow-x-auto scrollbar-hide px-4 sm:px-6 lg:px-8 pb-4">
                 {cwList.slice(0, 10).map((item) => (
                   <ContinueWatchingCard
-                    key={`${item.animeId}-${item.episode}`}
+                    key={item.animeId}
                     item={item}
                     onRemove={removeContinueWatching}
                   />

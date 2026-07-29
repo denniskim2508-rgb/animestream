@@ -1,7 +1,15 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { Mail, Lock, Eye, EyeOff, User, Film, ArrowRight } from 'lucide-react'
+import { Mail, Lock, Eye, EyeOff, User, Film, ArrowRight, Check, Circle } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
+
+const rules = [
+  { label: 'At least 8 characters', test: (p) => p.length >= 8 },
+  { label: 'One uppercase letter', test: (p) => /[A-Z]/.test(p) },
+  { label: 'One lowercase letter', test: (p) => /[a-z]/.test(p) },
+  { label: 'One number', test: (p) => /\d/.test(p) },
+  { label: 'One special character', test: (p) => /[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?`~]/.test(p) },
+]
 
 export default function Signup() {
   const [name, setName] = useState('')
@@ -12,6 +20,8 @@ export default function Signup() {
   const [error, setError] = useState('')
   const { signup, loading } = useAuth()
   const navigate = useNavigate()
+
+  const passwordStrength = useMemo(() => rules.map((r) => r.test(password)), [password])
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -137,7 +147,7 @@ export default function Signup() {
 
           <button
             type="submit"
-            disabled={loading || (password && confirmPassword && password !== confirmPassword)}
+            disabled={loading || !passwordStrength.every(Boolean) || (password && confirmPassword && password !== confirmPassword)}
             className="w-full py-3 bg-primary hover:bg-primary-dark text-white font-semibold rounded-xl transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98]"
           >
             {loading ? (
@@ -154,7 +164,17 @@ export default function Signup() {
             Sign In
           </Link>
         </p>
-      </div>
-    </div>
+            </div>
+            {password && (
+              <div className="mt-3 space-y-1.5">
+                {rules.map((rule, i) => (
+                  <div key={rule.label} className={`flex items-center gap-2 text-xs transition-colors ${passwordStrength[i] ? 'text-green-400' : 'text-gray-500'}`}>
+                    {passwordStrength[i] ? <Check className="w-3.5 h-3.5 shrink-0" /> : <Circle className="w-3.5 h-3.5 shrink-0" />}
+                    {rule.label}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
   )
 }

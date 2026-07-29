@@ -146,15 +146,15 @@ export default function Profile() {
         </section>
       )}
 
-      {(user.continueWatching || []).length > 0 && (
+      {(user.continueWatching || []).filter((e) => e.duration > 0 && e.currentTime > 0 && e.currentTime < e.duration * 0.95).length > 0 && (
         <section className="mb-10">
           <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
-            <Play className="w-5 h-5 text-primary-light" /> Continue Watching ({(user.continueWatching || []).length})
+            <Play className="w-5 h-5 text-primary-light" /> Continue Watching ({(user.continueWatching || []).filter((e) => e.duration > 0 && e.currentTime > 0 && e.currentTime < e.duration * 0.95).length})
           </h2>
           <div className="flex gap-3 overflow-x-auto scrollbar-hide pb-2">
-            {(user.continueWatching || []).map((item) => (
+            {(user.continueWatching || []).filter((e) => e.duration > 0 && e.currentTime > 0 && e.currentTime < e.duration * 0.95).map((item) => (
               <ContinueWatchingCard
-                key={`${item.animeId}-${item.episode}`}
+                key={item.animeId}
                 item={item}
                 onRemove={removeContinueWatching}
               />
