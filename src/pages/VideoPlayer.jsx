@@ -1,7 +1,7 @@
 import { useParams, Link, useSearchParams, useNavigate } from 'react-router-dom'
 import { useState, useEffect, useRef, useCallback } from 'react'
 import Hls from 'hls.js'
-import { ChevronLeft, Play, Pause, List, SkipForward, SkipBack, AlertCircle, Loader2, RefreshCw, Tv, Volume2, VolumeX, RotateCcw, Maximize, Minimize, Search } from 'lucide-react'
+import { ChevronLeft, Play, Pause, List, SkipForward, SkipBack, AlertCircle, Loader2, RefreshCw, Tv, Volume2, VolumeX, RotateCcw, Maximize, Minimize, Search, Check } from 'lucide-react'
 import { fetchMediaById } from '../api/anilist'
 import { resolveStream, getServers, getSources, fetchEpisodeAvailability } from '../api/anikoto'
 import { useAuth } from '../context/AuthContext'
@@ -43,6 +43,7 @@ export default function VideoPlayer() {
 
   const [showNextEpisode, setShowNextEpisode] = useState(false)
   const [nextEpLoading, setNextEpLoading] = useState(false)
+  const [showSeasonComplete, setShowSeasonComplete] = useState(false)
   const nextEpTriggeredRef = useRef(false)
   const hasNavigatedRef = useRef(false)
   const watchStartRef = useRef(Date.now())
@@ -413,12 +414,18 @@ export default function VideoPlayer() {
     }
     const onDurationChange = () => setDuration(video.duration)
     const onLoadedMetadata = () => setDuration(video.duration)
+    const onEnded = () => {
+      if (!hasNextEpisode) {
+        setShowSeasonComplete(true)
+      }
+    }
 
     video.addEventListener('play', onPlay)
     video.addEventListener('pause', onPause)
     video.addEventListener('timeupdate', onTimeUpdate)
     video.addEventListener('durationchange', onDurationChange)
     video.addEventListener('loadedmetadata', onLoadedMetadata)
+    video.addEventListener('ended', onEnded)
     setIntroSkipped(false)
     setOutroSkipped(false)
     return () => {
@@ -427,29 +434,41 @@ export default function VideoPlayer() {
       video.removeEventListener('timeupdate', onTimeUpdate)
       video.removeEventListener('durationchange', onDurationChange)
       video.removeEventListener('loadedmetadata', onLoadedMetadata)
+      video.removeEventListener('ended', onEnded)
     }
-  }, [streamData])
+  }, [streamData, hasNextEpisode, currentEp, totalEpisodes])
 
   useEffect(() => {
     nextEpTriggeredRef.current = false
-    hasNavigatedRef.current = false
     setShowNextEpisode(false)
     setNextEpLoading(false)
+    setShowSeasonComplete(false)
   }, [animeId, currentEp, audioMode])
 
+  useEffect(() => {
+    if (!showNextEpisode) {
+      hasNavigatedRef.current = false
+    }
+  }, [showNextEpisode])
+
   const [nextCountdown, setNextCountdown] = useState(5)
+
+  const goToNextEpisode = useCallback(() => {
+    if (hasNavigatedRef.current) return
+    hasNavigatedRef.current = true
+    navigate(`/watch/${animeId}/${currentEp + 1}?total=${totalEpisodes}&audio=${audioMode}`)
+  }, [animeId, currentEp, totalEpisodes, audioMode, navigate])
 
   useEffect(() => {
     if (!showNextEpisode || nextEpLoading || hasNavigatedRef.current) return
     if (nextCountdown <= 0) {
-      hasNavigatedRef.current = true
-      navigate(`/watch/${animeId}/${currentEp + 1}?total=${totalEpisodes}&audio=${audioMode}`)
+      goToNextEpisode()
       return
     }
     if (!playing) return
     const timer = setTimeout(() => setNextCountdown((c) => c - 1), 1000)
     return () => clearTimeout(timer)
-  }, [showNextEpisode, nextCountdown, playing, nextEpLoading, animeId, currentEp, totalEpisodes, audioMode, navigate])
+  }, [showNextEpisode, nextCountdown, playing, nextEpLoading, goToNextEpisode])
 
   useEffect(() => {
     if (showNextEpisode) setNextCountdown(5)
@@ -614,13 +633,41 @@ export default function VideoPlayer() {
                 loading={nextEpLoading}
                 onWatchNow={() => {
                   setNextEpLoading(true)
-                  navigate(`/watch/${animeId}/${currentEp + 1}?total=${totalEpisodes}&audio=${audioMode}`)
+                  goToNextEpisode()
                 }}
                 onCancel={() => {
                   setShowNextEpisode(false)
                   nextEpTriggeredRef.current = false
                 }}
               />
+
+              {showSeasonComplete && (
+                <div className="absolute inset-0 bg-black/80 flex items-center justify-center z-40">
+                  <div className="text-center px-6">
+                    <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-primary/20 flex items-center justify-center">
+                      <Check className="w-8 h-8 text-primary" />
+                    </div>
+                    <h2 className="text-2xl font-bold text-white mb-2">Season Complete</h2>
+                    <p className="text-gray-400 mb-6 max-w-sm">
+                      You've reached the end of {anime?.title || 'this series'}. Check back for new episodes!
+                    </p>
+                    <div className="flex items-center justify-center gap-3">
+                      <Link
+                        to={`/anime/${animeId}`}
+                        className="px-5 py-2.5 bg-primary hover:bg-primary-dark text-white font-semibold rounded-lg transition-colors text-sm"
+                      >
+                        View Details
+                      </Link>
+                      <Link
+                        to="/home"
+                        className="px-5 py-2.5 bg-white/10 hover:bg-white/20 text-white font-semibold rounded-lg transition-colors text-sm"
+                      >
+                        Browse More
+                      </Link>
+                    </div>
+                  </div>
+                </div>
+              )}
             </>
           ) : (
             <div className="w-full h-full flex items-center justify-center flex-col gap-4">

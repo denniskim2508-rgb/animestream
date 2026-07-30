@@ -277,6 +277,103 @@ app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok', message: 'Animestream server' })
 })
 
+// ── MangaDex proxy ────────────────────────────────────────────
+const MANGADEX_API = 'https://api.mangadex.org'
+const MANGADEX_COVERS = 'https://uploads.mangadex.org/covers'
+
+async function mangadexFetch(url) {
+  const res = await fetch(url, {
+    headers: { 'Accept': 'application/json' },
+  })
+  if (!res.ok) throw new Error(`MangaDex API ${res.status}: ${res.statusText}`)
+  return res.json()
+}
+
+app.get('/api/manga/search', async (req, res) => {
+  try {
+    const { q, limit = 20, offset = 0 } = req.query
+    if (!q) return res.status(400).json({ error: 'q is required' })
+    const data = await mangadexFetch(
+      `${MANGADEX_API}/manga?title=${encodeURIComponent(q)}&limit=${limit}&offset=${offset}&includes[]=cover_art&includes[]=author&order[relevance]=desc`
+    )
+    res.json(data)
+  } catch (err) {
+    console.error('[mangadex] search error:', err.message)
+    res.status(502).json({ error: 'Failed to search manga' })
+  }
+})
+
+app.get('/api/manga/trending', async (req, res) => {
+  try {
+    const { limit = 20, offset = 0 } = req.query
+    const data = await mangadexFetch(
+      `${MANGADEX_API}/manga?limit=${limit}&offset=${offset}&includes[]=cover_art&includes[]=author&order[followedCount]=desc&availableTranslatedLanguage[]=en&contentRating[]=safe&contentRating[]=suggestive&contentRating[]=erotica`
+    )
+    res.json(data)
+  } catch (err) {
+    console.error('[mangadex] trending error:', err.message)
+    res.status(502).json({ error: 'Failed to fetch trending manga' })
+  }
+})
+
+app.get('/api/manga/latest', async (req, res) => {
+  try {
+    const { limit = 20, offset = 0 } = req.query
+    const data = await mangadexFetch(
+      `${MANGADEX_API}/manga?limit=${limit}&offset=${offset}&includes[]=cover_art&includes[]=author&order[latestUploadedChapter]=desc&availableTranslatedLanguage[]=en&contentRating[]=safe&contentRating[]=suggestive`
+    )
+    res.json(data)
+  } catch (err) {
+    console.error('[mangadex] latest error:', err.message)
+    res.status(502).json({ error: 'Failed to fetch latest manga' })
+  }
+})
+
+app.get('/api/manga/random', async (_req, res) => {
+  try {
+    const data = await mangadexFetch(`${MANGADEX_API}/manga/random?includes[]=cover_art&includes[]=author`)
+    res.json(data)
+  } catch (err) {
+    console.error('[mangadex] random error:', err.message)
+    res.status(502).json({ error: 'Failed to fetch random manga' })
+  }
+})
+
+app.get('/api/manga/:id', async (req, res) => {
+  try {
+    const data = await mangadexFetch(
+      `${MANGADEX_API}/manga/${req.params.id}?includes[]=cover_art&includes[]=author&includes[]=artist&includes[]=tag`
+    )
+    res.json(data)
+  } catch (err) {
+    console.error('[mangadex] details error:', err.message)
+    res.status(502).json({ error: 'Failed to fetch manga details' })
+  }
+})
+
+app.get('/api/manga/:id/chapters', async (req, res) => {
+  try {
+    const { lang = 'en', limit = 100, offset = 0 } = req.query
+    const data = await mangadexFetch(
+      `${MANGADEX_API}/manga/${req.params.id}/feed?limit=${limit}&offset=${offset}&translatedLanguage[]=${lang}&order[chapter]=desc&includes[]=scanlation_group`
+    )
+    res.json(data)
+  } catch (err) {
+    console.error('[mangadex] chapters error:', err.message)
+    res.status(502).json({ error: 'Failed to fetch chapters' })
+  }
+})
+
+app.get('/api/manga/chapter/:id', async (req, res) => {
+  try {
+    const data = await mangadexFetch(`${MANGADEX_API}/at-home/server/${req.params.id}`)
+    res.json(data)
+  } catch (err) {
+    console.error('[mangadex] chapter pages error:', err.message)
+    res.status(502).json({ error: 'Failed to fetch chapter pages' })
+  }
+})
+
 // ── Serve built frontend ──────────────────────────────────────
 const distPath = path.join(__dirname, 'dist')
 app.use(express.static(distPath))

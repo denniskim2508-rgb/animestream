@@ -20,6 +20,10 @@ import TermsOfService from './pages/TermsOfService'
 import PrivacyPolicy from './pages/PrivacyPolicy'
 import DMCA from './pages/DMCA'
 import HelpCenter from './pages/HelpCenter'
+import MangaHome from './pages/MangaHome'
+import MangaDetail from './pages/MangaDetail'
+import MangaReader from './pages/MangaReader'
+import MangaSearch from './pages/MangaSearch'
 import { SkeletonPage } from './components/ui/Skeleton'
 
 function PageLoader() {
@@ -172,6 +176,31 @@ export default function App() {
           </Layout>
         }
       />
+      <Route
+        path="/manga"
+        element={
+          <Layout>
+            <MangaHome />
+          </Layout>
+        }
+      />
+      <Route
+        path="/manga/search"
+        element={
+          <Layout>
+            <MangaSearch />
+          </Layout>
+        }
+      />
+      <Route
+        path="/manga/:id"
+        element={
+          <Layout>
+            <MangaDetail />
+          </Layout>
+        }
+      />
+      <Route path="/manga/:id/read/:chapterId" element={<MangaReader />} />
 
     </Routes>
   )

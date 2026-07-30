@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
-import { Search, Bell, Menu, X, User, ChevronDown, LogOut, Settings, Crown, Film, Play, List, Download, RefreshCw } from 'lucide-react'
+import { Search, Bell, Menu, X, User, ChevronDown, LogOut, Settings, Crown, Film, Play, List, Download, RefreshCw, BookOpen } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 
 const navLinks = [
   { path: '/about', label: 'About' },
   { path: '/home', label: 'Home' },
+  { path: '/manga', label: 'Manga' },
   { path: '/browse', label: 'Browse' },
   { path: '/genres', label: 'Genres' },
 ]
