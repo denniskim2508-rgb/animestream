@@ -2,14 +2,19 @@
 // React never talks to a provider directly — it consumes normalized shapes
 // through the /api/manga/* endpoints, and opaque ids like "allmanga:<ref>".
 //
-// Fallback order: MangaDex (primary) → AllManga (backup). More adapters can
-// be added to the registry without touching the API layer.
+// List endpoints (search/trending/latest) query EVERY provider in parallel and
+// merge the results, so a title that only exists on one provider still shows up.
+// Single-item operations (detail/chapters/pages/lookup) route by opaque id or
+// fall back MangaDex → AllManga. More adapters can be added to the registry
+// without touching the API layer.
 
 import * as mangadex from './mangadex.js'
 import * as allmanga from './allmanga.js'
+import { normalizeTitle, titleScore } from './util.js'
 
 const PROVIDERS = { mangadex, allmanga }
 const FALLBACK_ORDER = ['mangadex', 'allmanga']
+const MERGE_ORDER = ['mangadex', 'allmanga']
 
 // `mangadex:<uuid>` or `allmanga:<ref>`; bare ids are treated as MangaDex for
 // backwards compatibility with any old links that were stored without a prefix.
@@ -45,16 +50,96 @@ async function withFallback(fn) {
   throw lastError || new Error('All manga providers failed')
 }
 
+// ── Cross-provider result merging ─────────────────────────────
+
+function dedupeByTitle(items) {
+  const seen = new Map()
+  for (const item of items) {
+    const key = normalizeTitle(item.title)
+    if (!key) continue
+    if (!seen.has(key)) seen.set(key, item) // first occurrence wins (MangaDex first)
+  }
+  return [...seen.values()]
+}
+
+// When both "Solo Leveling" and "Solo Leveling (Book Version)" appear in the
+// same result set, drop the "(Book Version)" duplicate — it's the same series
+// re-uploaded on MangaDex and just clutters the grid.
+function dropBookVersionDupes(items) {
+  const normTitles = new Set(items.map((i) => normalizeTitle(i.title)))
+  return items.filter((i) => {
+    const m = String(i.title || '').match(/^(.+?)\s*\(book\s*version\)\s*$/i)
+    if (!m) return true
+    return !normTitles.has(normalizeTitle(m[1]))
+  })
+}
+
+function settledData(r) {
+  if (r.status === 'fulfilled') return r.value
+  console.error(`[manga] provider failed:`, r.reason?.message)
+  return { data: [], total: 0 }
+}
+
+// Fetch every provider at once, merge, and re-rank by how well each result
+// matches the query (exact/subset titles first). Each item keeps its opaque
+// prefixed id, so detail/chapters still route to the right provider.
+async function mergeSearch(query, limit, offset) {
+  // Fetch extra from each provider because deduping can shrink the set.
+  const want = Math.max(limit * 2, 30)
+  const settled = await Promise.allSettled(
+    MERGE_ORDER.map((name) => PROVIDERS[name].search(query, want, offset))
+  )
+  const results = settled.flatMap((r) => settledData(r).data)
+  const merged = dropBookVersionDupes(dedupeByTitle(results))
+  const q = String(query || '')
+  merged.sort((a, b) => {
+    const sa = titleScore(q, a.title)
+    const sb = titleScore(q, b.title)
+    if (sa !== sb) return sb - sa
+    return a.provider === 'mangadex' ? -1 : 1
+  })
+  const total = Math.max(...settled.map((r) => (r.status === 'fulfilled' ? r.value.total : 0)))
+  return { data: merged.slice(0, limit), total }
+}
+
+// Interleave two independently-ranked lists round-robin (md[0], am[0], md[1],
+// am[1], ...) with title dedupe, so curated lists mix Japanese mainstream with
+// manhwa/webtoon titles that may only rank on one provider.
+async function mergeLists(fetchByName, limit) {
+  const settled = await Promise.allSettled(MERGE_ORDER.map(fetchByName))
+  const lists = Object.fromEntries(
+    MERGE_ORDER.map((name, i) => [name, settledData(settled[i]).data])
+  )
+  const interleaved = []
+  const seen = new Set()
+  const len = Math.max(...MERGE_ORDER.map((name) => lists[name].length))
+  for (let i = 0; i < len; i++) {
+    for (const name of MERGE_ORDER) {
+      const item = lists[name][i]
+      if (!item) continue
+      const key = normalizeTitle(item.title)
+      if (!key || seen.has(key)) continue
+      seen.add(key)
+      interleaved.push(item)
+    }
+  }
+  const total = Math.max(...MERGE_ORDER.map((name) => {
+    const r = settled[MERGE_ORDER.indexOf(name)]
+    return r.status === 'fulfilled' ? r.value.total : 0
+  }))
+  return { data: interleaved.slice(0, limit), total }
+}
+
 export async function search(query, limit = 20, offset = 0) {
-  return withFallback((p) => p.search(query, limit, offset))
+  return mergeSearch(query, limit, offset)
 }
 
 export async function trending(limit = 20, offset = 0) {
-  return withFallback((p) => p.trending(limit, offset))
+  return mergeLists((name) => PROVIDERS[name].trending(limit, offset), limit)
 }
 
 export async function latest(limit = 20, offset = 0) {
-  return withFallback((p) => p.latest(limit, offset))
+  return mergeLists((name) => PROVIDERS[name].latest(limit, offset), limit)
 }
 
 export async function random() {
