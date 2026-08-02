@@ -40,6 +40,7 @@ function mapManga(manga) {
   return {
     id: `${PROVIDER}:${manga.id}`,
     title: extractTitle(manga),
+    altTitles: [...new Set(allTitleStrings(manga))].slice(0, 30),
     description: attr.description?.en || '',
     coverImage: cover?.attributes?.fileName
       ? `${COVERS}/${manga.id}/${cover.attributes.fileName}.256.jpg`
@@ -60,9 +61,13 @@ function mapManga(manga) {
 
 function mapChapters(data) {
   const total = data.total || data.data?.length || 0
-  const chapters = (data.data || []).map((ch) => {
-    const attr = ch.attributes || {}
-    return {
+  // Chapters that only link out to another site have no pages on MangaDex and
+  // would render a blank reader, so drop them from the readable list.
+  const chapters = (data.data || [])
+    .filter((ch) => !ch.attributes?.externalUrl)
+    .map((ch) => {
+      const attr = ch.attributes || {}
+      return {
       id: `${PROVIDER}:${ch.id}`,
       chapter: attr.chapter ? parseFloat(attr.chapter) : null,
       title: attr.title || '',
@@ -72,7 +77,8 @@ function mapChapters(data) {
       publishedAt: attr.publishAt || null,
       group: (ch.relationships || []).find((r) => r.type === 'scanlation_group')?.attributes?.name || null,
     }
-  }).filter((ch) => ch.chapter !== null)
+    })
+    .filter((ch) => ch.chapter !== null)
   return { data: chapters, total }
 }
 

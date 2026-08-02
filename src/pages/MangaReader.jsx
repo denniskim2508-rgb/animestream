@@ -7,7 +7,10 @@ import { findAnimeForManga } from '../api/crosslink'
 export default function MangaReader() {
   const { id, chapterId } = useParams()
   const navigate = useNavigate()
-  const [pages, setPages] = useState([])
+  const [pagesSd, setPagesSd] = useState([])
+  const [pagesFull, setPagesFull] = useState([])
+  const [useFullRes, setUseFullRes] = useState(false)
+  const [erroredImages, setErroredImages] = useState(new Set())
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [currentPage, setCurrentPage] = useState(0)
@@ -31,13 +34,16 @@ export default function MangaReader() {
     setError(null)
     setCurrentPage(0)
     setLoadedImages(new Set())
+    setErroredImages(new Set())
+    setUseFullRes(false)
 
     Promise.all([
       getChapterPages(chapterId),
       getMangaDetails(id).catch(() => null),
     ]).then(([pageData, manga]) => {
       if (cancelled) return
-      setPages(useDataSaver ? pageData.pagesSd : pageData.pages)
+      setPagesSd(pageData.pagesSd || [])
+      setPagesFull(pageData.pages || [])
       if (manga) setMangaTitle(manga.title)
     }).catch((err) => {
       if (!cancelled) setError(err.message || 'Failed to load chapter')
@@ -71,6 +77,12 @@ export default function MangaReader() {
   const currentIndex = allChapters.findIndex((ch) => ch.id === chapterId)
   const prevChapter = currentIndex > 0 ? allChapters[currentIndex - 1] : null
   const nextChapter = currentIndex < allChapters.length - 1 ? allChapters[currentIndex + 1] : null
+
+  // Data-saver images are occasionally missing on MangaDex CDN nodes, so any
+  // load failure drops the whole chapter back to full-resolution pages. Only
+  // use data-saver when a real (non-empty) set exists.
+  const canUseSd = pagesSd.length > 0 && pagesSd.length === pagesFull.length
+  const pages = useDataSaver && !useFullRes && canUseSd ? pagesSd : pagesFull
 
   const goToPage = useCallback((idx) => {
     setCurrentPage(Math.max(0, Math.min(pages.length - 1, idx)))
@@ -114,6 +126,15 @@ export default function MangaReader() {
 
   const handleImageLoad = (idx) => {
     setLoadedImages((prev) => new Set(prev).add(idx))
+  }
+
+  const handleImageError = (idx) => {
+    if (useDataSaver && !useFullRes) {
+      setUseFullRes(true)
+      return
+    }
+    setLoadedImages((prev) => new Set(prev).add(idx))
+    setErroredImages((prev) => new Set(prev).add(idx))
   }
 
   const toggleDataSaver = () => {
@@ -210,18 +231,27 @@ export default function MangaReader() {
               const idx = Math.max(0, currentPage - 1) + offset
               return (
                 <div key={idx} className={`w-full flex justify-center ${idx === currentPage ? '' : 'hidden'}`}>
-                  {!loadedImages.has(idx) && (
+                  {erroredImages.has(idx) ? (
                     <div className="w-full py-32 flex items-center justify-center">
-                      <Loader2 className="w-8 h-8 text-primary animate-spin" />
+                      <p className="text-gray-500 text-sm">This image could not be loaded.</p>
                     </div>
+                  ) : (
+                    <>
+                      {!loadedImages.has(idx) && (
+                        <div className="w-full py-32 flex items-center justify-center">
+                          <Loader2 className="w-8 h-8 text-primary animate-spin" />
+                        </div>
+                      )}
+                      <img
+                        src={url}
+                        alt={`Page ${idx + 1}`}
+                        className="w-full max-w-3xl h-auto"
+                        onLoad={() => handleImageLoad(idx)}
+                        onError={() => handleImageError(idx)}
+                        style={loadedImages.has(idx) ? {} : { display: 'none' }}
+                      />
+                    </>
                   )}
-                  <img
-                    src={url}
-                    alt={`Page ${idx + 1}`}
-                    className="w-full max-w-3xl h-auto"
-                    onLoad={() => handleImageLoad(idx)}
-                    style={loadedImages.has(idx) ? {} : { display: 'none' }}
-                  />
                 </div>
               )
             })}

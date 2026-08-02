@@ -174,7 +174,70 @@ export async function detail(id) {
 
 export async function chapters(id, lang = 'en', limit = 100, offset = 0) {
   const { provider, ref } = splitId(id)
-  return PROVIDERS[provider].chapters(ref, lang, limit, offset)
+  let primary
+  try {
+    primary = await PROVIDERS[provider].chapters(ref, lang, limit, offset)
+  } catch (err) {
+    console.error(`[manga] ${provider} chapters failed:`, err.message)
+    primary = { data: [], total: 0 }
+  }
+  if (!isEmpty(primary)) return { ...primary, provider }
+
+  // The owning provider has no readable chapters here (licensed/removed/external
+  // chapters only). Find the same title on another provider and return its
+  // chapters instead, so the reader never shows an empty/black chapter.
+  try {
+    const det = await PROVIDERS[provider].detail(ref)
+    const d = det?.data
+    const seen = new Set()
+    for (const title of [d?.title, ...(Array.isArray(d?.altTitles) ? d.altTitles : [])]) {
+      if (!title) continue
+      const key = normalizeTitle(title)
+      if (!key || seen.has(key)) continue
+      seen.add(key)
+      const src = await findChapterSource(title, provider)
+      if (!src) continue
+      const res = await PROVIDERS[src.name].chapters(splitId(src.id).ref, lang, limit, offset)
+      if (!isEmpty(res)) return { ...res, provider: src.name, source: src.id }
+    }
+  } catch (err) {
+    console.error('[manga] chapter fallback failed:', err.message)
+  }
+  return { ...primary, provider }
+}
+
+// Search each readable provider for the closest title match so the chapter
+// fallback lands on the same series and not a sequel or spin-off. Exact and
+// strict word-subset matches (titleScore) are preferred; a fuzzy Dice score is
+// used for titles that differ only by localization (e.g. "wa Koi o Suru" vs
+// "wa Koi wo Suru") where a strict match would miss the same series.
+async function findChapterSource(title, excludeProvider) {
+  const best = { score: 0, src: null }
+  for (const name of FALLBACK_ORDER) {
+    if (name === excludeProvider) continue
+    try {
+      const res = await PROVIDERS[name].search(title, 20, 0)
+      for (const item of res.data) {
+        const score = Math.max(titleScore(title, item.title), fuzzyTitleScore(title, item.title))
+        if (score > best.score) {
+          best.score = score
+          best.src = { name, id: item.id }
+        }
+      }
+    } catch (err) {
+      console.error(`[manga] ${name} chapter-source search failed:`, err.message)
+    }
+  }
+  return best.score >= 0.6 ? best.src : null
+}
+
+function fuzzyTitleScore(query, title) {
+  if (titleScore(query, title)) return 0
+  const a = normalizeTitle(query).split(' ').filter(Boolean)
+  const b = normalizeTitle(title).split(' ').filter(Boolean)
+  if (!a.length || !b.length) return 0
+  const common = a.filter((w) => b.includes(w)).length
+  return (common * 2) / (a.length + b.length)
 }
 
 export async function pages(chapterId) {
