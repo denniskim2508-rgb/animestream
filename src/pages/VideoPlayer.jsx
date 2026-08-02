@@ -1,12 +1,13 @@
 import { useParams, Link, useSearchParams, useNavigate } from 'react-router-dom'
 import { useState, useEffect, useRef, useCallback } from 'react'
 import Hls from 'hls.js'
-import { ChevronLeft, Play, Pause, List, SkipForward, SkipBack, AlertCircle, Loader2, RefreshCw, Tv, Volume2, VolumeX, RotateCcw, Maximize, Minimize, Search, Check } from 'lucide-react'
+import { ChevronLeft, Play, Pause, List, SkipForward, SkipBack, AlertCircle, Loader2, RefreshCw, Tv, Volume2, VolumeX, RotateCcw, Maximize, Minimize, Search, Check, BookOpen } from 'lucide-react'
 import { fetchMediaById } from '../api/anilist'
 import { resolveStream, getServers, getSources, fetchEpisodeAvailability } from '../api/anikoto'
 import { useAuth } from '../context/AuthContext'
 import CommentSection from '../components/CommentSection'
 import NextEpisodeOverlay from '../components/ui/NextEpisodeOverlay'
+import { findMangaForAnime } from '../api/crosslink'
 
 function encodeHeaders(headers) {
   return btoa(JSON.stringify(headers)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '')
@@ -51,6 +52,8 @@ export default function VideoPlayer() {
   const resumeSetRef = useRef(false)
   const cwRef = useRef(user?.continueWatching || [])
   const saveProgressRef = useRef(null)
+  const [linkedManga, setLinkedManga] = useState(null)
+  const [mangaLoading, setMangaLoading] = useState(false)
 
   const [playing, setPlaying] = useState(false)
   const [currentTime, setCurrentTime] = useState(0)
@@ -271,6 +274,17 @@ export default function VideoPlayer() {
       navigate(`/watch/${animeId}/${currentEp}?total=${totalEpisodes}&audio=sub`, { replace: true })
     }
   }, [hasSub, hasDub, audioMode, animeId, currentEp, totalEpisodes, navigate])
+
+  useEffect(() => {
+    if (!anime?.relations?.length) return
+    let cancelled = false
+    setMangaLoading(true)
+    findMangaForAnime(anime.relations, anime.title)
+      .then((m) => { if (!cancelled) setLinkedManga(m) })
+      .catch(() => {})
+      .finally(() => { if (!cancelled) setMangaLoading(false) })
+    return () => { cancelled = true }
+  }, [anime?.relations, anime?.title])
 
   async function switchProvider(providerId) {
     if (!streamData?.slug || providerId === activeProvider) return
@@ -716,6 +730,49 @@ export default function VideoPlayer() {
             <div className="mb-4 px-4 py-3 bg-yellow-500/10 border border-yellow-500/30 rounded-lg flex items-center gap-3">
               <AlertCircle className="w-5 h-5 text-yellow-400 shrink-0" />
               <p className="text-sm text-yellow-300">This episode is not available yet.</p>
+            </div>
+          )}
+
+          {!mangaLoading && linkedManga && totalEpisodes > 0 && currentEp >= totalEpisodes && (
+            <div className="mb-4 animate-[fadeSlideUp_300ms_ease-out]">
+              <Link
+                to={`/manga/${linkedManga.mangaId}`}
+                className="block group"
+              >
+                <div className="bg-[#161B2E] rounded-2xl border border-white/[0.08] shadow-xl shadow-black/30 overflow-hidden hover:border-purple-500/30 transition-all duration-300">
+                  <div className="flex flex-col md:flex-row items-stretch">
+                    <div className="w-full md:w-24 shrink-0">
+                      <div className="aspect-[3/4] md:aspect-auto md:h-full">
+                        {linkedManga.coverImage ? (
+                          <img src={linkedManga.coverImage} alt={linkedManga.title} className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="w-full h-full bg-gray-800 flex items-center justify-center">
+                            <BookOpen className="w-6 h-6 text-gray-600" />
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex-1 p-3 md:p-4 flex flex-col justify-center gap-2">
+                      <div className="flex items-center gap-2">
+                        <span className="text-lg">🎉</span>
+                        <p className="text-sm font-semibold text-white">You're caught up with the anime!</p>
+                      </div>
+                      <p className="text-xs text-gray-400">The story continues in the manga.</p>
+                      <div className="flex items-center gap-4 text-xs text-gray-500">
+                        <span>Last Anime Episode: <span className="text-white font-medium">{totalEpisodes}</span></span>
+                        {linkedManga.latestChapter && (
+                          <span>Continue from Manga Chapter: <span className="text-purple-400 font-medium">#{linkedManga.latestChapter}</span></span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2 pt-1">
+                        <span className="inline-flex items-center gap-1.5 px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white text-xs font-semibold rounded-xl transition-all active:scale-95 shadow-lg shadow-purple-600/25">
+                          <BookOpen className="w-3.5 h-3.5" /> Continue Reading
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </Link>
             </div>
           )}
           <div className="flex items-center gap-3 mb-4">

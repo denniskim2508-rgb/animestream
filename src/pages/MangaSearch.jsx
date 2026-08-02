@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useSearchParams, Link } from 'react-router-dom'
 import { Search, Loader2, BookOpen, Eye } from 'lucide-react'
-import { searchManga, getTrendingManga, getLatestManga } from '../api/mangadex'
+import { searchManga, getTrendingManga, getLatestManga } from '../api/manga'
 
 function MangaCard({ manga }) {
   return (

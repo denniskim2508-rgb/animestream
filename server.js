@@ -3,6 +3,8 @@ import express from 'express'
 import cors from 'cors'
 import path from 'path'
 import { fileURLToPath } from 'url'
+import * as manga from './server/providers/manga.js'
+import { encodeHeaders, decodeHeaders } from './server/providers/util.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const app = express()
@@ -206,15 +208,6 @@ app.get('/api/stream/sources', async (req, res) => {
 
 // ── Media proxy for m3u8 + segments ───────────────────────────
 
-function encodeHeaders(headers) {
-  return Buffer.from(JSON.stringify(headers)).toString('base64url')
-}
-
-function decodeHeaders(h) {
-  try { return JSON.parse(Buffer.from(h, 'base64url').toString()) }
-  catch { return {} }
-}
-
 function rewriteM3u8(content, baseUrl, encH) {
   return content.replace(/^(?!#)(.*\S)$/gm, (line) => {
     const target = line.startsWith('http://') || line.startsWith('https://')
@@ -277,28 +270,34 @@ app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok', message: 'Animestream server' })
 })
 
-// ── MangaDex proxy ────────────────────────────────────────────
-const MANGADEX_API = 'https://api.mangadex.org'
-const MANGADEX_COVERS = 'https://uploads.mangadex.org/covers'
+// ── Manga Provider Manager ────────────────────────────────────
+// All /api/manga/* routes go through the Provider Manager, which normalizes
+// results and falls back across providers. The frontend only ever sees
+// normalized shapes and opaque ids like "mangadex:<uuid>" / "allmanga:<ref>".
 
-async function mangadexFetch(url) {
-  const res = await fetch(url, {
-    headers: { 'Accept': 'application/json' },
-  })
-  if (!res.ok) throw new Error(`MangaDex API ${res.status}: ${res.statusText}`)
-  return res.json()
-}
+app.get('/api/manga/lookup', async (req, res) => {
+  try {
+    const titles = [].concat(req.query.titles || [])
+      .map((s) => String(s).trim())
+      .filter(Boolean)
+    if (!titles.length) return res.status(400).json({ error: 'titles is required' })
+    const strict = req.query.strict === '1'
+    const { data, provider } = await manga.lookup(titles, strict)
+    res.json({ data, provider })
+  } catch (err) {
+    console.error('[manga] lookup error:', err.message)
+    res.status(502).json({ error: 'Failed to lookup manga' })
+  }
+})
 
 app.get('/api/manga/search', async (req, res) => {
   try {
     const { q, limit = 20, offset = 0 } = req.query
     if (!q) return res.status(400).json({ error: 'q is required' })
-    const data = await mangadexFetch(
-      `${MANGADEX_API}/manga?title=${encodeURIComponent(q)}&limit=${limit}&offset=${offset}&includes[]=cover_art&includes[]=author&order[relevance]=desc`
-    )
-    res.json(data)
+    const { data, total, provider } = await manga.search(q, Number(limit), Number(offset))
+    res.json({ data, total, provider })
   } catch (err) {
-    console.error('[mangadex] search error:', err.message)
+    console.error('[manga] search error:', err.message)
     res.status(502).json({ error: 'Failed to search manga' })
   }
 })
@@ -306,12 +305,10 @@ app.get('/api/manga/search', async (req, res) => {
 app.get('/api/manga/trending', async (req, res) => {
   try {
     const { limit = 20, offset = 0 } = req.query
-    const data = await mangadexFetch(
-      `${MANGADEX_API}/manga?limit=${limit}&offset=${offset}&includes[]=cover_art&includes[]=author&order[followedCount]=desc&availableTranslatedLanguage[]=en&contentRating[]=safe&contentRating[]=suggestive&contentRating[]=erotica`
-    )
-    res.json(data)
+    const { data, total, provider } = await manga.trending(Number(limit), Number(offset))
+    res.json({ data, total, provider })
   } catch (err) {
-    console.error('[mangadex] trending error:', err.message)
+    console.error('[manga] trending error:', err.message)
     res.status(502).json({ error: 'Failed to fetch trending manga' })
   }
 })
@@ -319,34 +316,40 @@ app.get('/api/manga/trending', async (req, res) => {
 app.get('/api/manga/latest', async (req, res) => {
   try {
     const { limit = 20, offset = 0 } = req.query
-    const data = await mangadexFetch(
-      `${MANGADEX_API}/manga?limit=${limit}&offset=${offset}&includes[]=cover_art&includes[]=author&order[latestUploadedChapter]=desc&availableTranslatedLanguage[]=en&contentRating[]=safe&contentRating[]=suggestive`
-    )
-    res.json(data)
+    const { data, total, provider } = await manga.latest(Number(limit), Number(offset))
+    res.json({ data, total, provider })
   } catch (err) {
-    console.error('[mangadex] latest error:', err.message)
+    console.error('[manga] latest error:', err.message)
     res.status(502).json({ error: 'Failed to fetch latest manga' })
   }
 })
 
 app.get('/api/manga/random', async (_req, res) => {
   try {
-    const data = await mangadexFetch(`${MANGADEX_API}/manga/random?includes[]=cover_art&includes[]=author`)
-    res.json(data)
+    const { data, provider } = await manga.random()
+    res.json({ data, provider })
   } catch (err) {
-    console.error('[mangadex] random error:', err.message)
+    console.error('[manga] random error:', err.message)
     res.status(502).json({ error: 'Failed to fetch random manga' })
+  }
+})
+
+app.get('/api/manga/chapter/:id', async (req, res) => {
+  try {
+    const pageData = await manga.pages(req.params.id)
+    res.json(pageData)
+  } catch (err) {
+    console.error('[manga] chapter pages error:', err.message)
+    res.status(502).json({ error: 'Failed to fetch chapter pages' })
   }
 })
 
 app.get('/api/manga/:id', async (req, res) => {
   try {
-    const data = await mangadexFetch(
-      `${MANGADEX_API}/manga/${req.params.id}?includes[]=cover_art&includes[]=author&includes[]=artist&includes[]=tag`
-    )
-    res.json(data)
+    const { data, provider } = await manga.detail(req.params.id)
+    res.json({ data, provider })
   } catch (err) {
-    console.error('[mangadex] details error:', err.message)
+    console.error('[manga] details error:', err.message)
     res.status(502).json({ error: 'Failed to fetch manga details' })
   }
 })
@@ -354,23 +357,11 @@ app.get('/api/manga/:id', async (req, res) => {
 app.get('/api/manga/:id/chapters', async (req, res) => {
   try {
     const { lang = 'en', limit = 100, offset = 0 } = req.query
-    const data = await mangadexFetch(
-      `${MANGADEX_API}/manga/${req.params.id}/feed?limit=${limit}&offset=${offset}&translatedLanguage[]=${lang}&order[chapter]=desc&includes[]=scanlation_group`
-    )
-    res.json(data)
+    const { data, total, provider } = await manga.chapters(req.params.id, lang, Number(limit), Number(offset))
+    res.json({ data, total, provider })
   } catch (err) {
-    console.error('[mangadex] chapters error:', err.message)
+    console.error('[manga] chapters error:', err.message)
     res.status(502).json({ error: 'Failed to fetch chapters' })
-  }
-})
-
-app.get('/api/manga/chapter/:id', async (req, res) => {
-  try {
-    const data = await mangadexFetch(`${MANGADEX_API}/at-home/server/${req.params.id}`)
-    res.json(data)
-  } catch (err) {
-    console.error('[mangadex] chapter pages error:', err.message)
-    res.status(502).json({ error: 'Failed to fetch chapter pages' })
   }
 })
 

@@ -135,7 +135,7 @@ export async function fetchMediaById(id) {
             relationType
             node {
               id
-              title { romaji english }
+              title { romaji english native }
               coverImage { large medium }
               averageScore
               format
@@ -342,6 +342,8 @@ function normalizeMediaDetail(media) {
       type: e.relationType,
       id: e.node.id,
       title: e.node.title.english || e.node.title.romaji,
+      romajiTitle: e.node.title.romaji,
+      nativeTitle: e.node.title.native,
       coverImage: e.node.coverImage.large,
       rating: e.node.averageScore ? e.node.averageScore / 10 : null,
       format: e.node.format,
@@ -354,6 +356,61 @@ function normalizeMediaDetail(media) {
       image: e.node.image?.medium,
     })),
   }
+}
+
+export async function fetchMangaById(id) {
+  const query = `
+    query ($id: Int) {
+      Media(id: $id, type: MANGA) {
+        id
+        title { romaji english native }
+        coverImage { large medium }
+        description(asHtml: false)
+        genres
+        averageScore
+        status
+        chapters
+        volumes
+        relations {
+          edges {
+            relationType
+            node {
+              id
+              title { romaji english }
+              coverImage { large }
+              averageScore
+              format
+              episodes
+              status
+              studios(isMain: true) { nodes { name } }
+            }
+          }
+        }
+      }
+    }
+  `
+  const data = await anilistFetch(query, { id: Number(id) })
+  return data.Media
+}
+
+export async function searchMangaAnilist(search, page = 1, perPage = 5) {
+  const query = `
+    query ($search: String, $page: Int, $perPage: Int) {
+      Page(page: $page, perPage: $perPage) {
+        media(search: $search, type: MANGA, isAdult: false, sort: SEARCH_MATCH) {
+          id
+          title { romaji english }
+          coverImage { large }
+          averageScore
+          status
+          chapters
+          formats
+        }
+      }
+    }
+  `
+  const data = await anilistFetch(query, { search, page, perPage })
+  return data.Page.media
 }
 
 const ANILIST_GENRES = [

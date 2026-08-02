@@ -1,6 +1,6 @@
 import { useParams, Link } from 'react-router-dom'
 import { useState, useEffect } from 'react'
-import { Star, Play, Plus, Check, Heart, Clock, Calendar, Film, Tv } from 'lucide-react'
+import { Star, Play, Plus, Check, Heart, Clock, Calendar, Film, Tv, BookOpen, ChevronRight } from 'lucide-react'
 import { fetchMediaById, fetchRecommendations } from '../api/anilist'
 import { getAnimeDetails, getEpisodes } from '../api/anikoto'
 import { useAuth } from '../context/AuthContext'
@@ -9,6 +9,7 @@ import GenreTag from '../components/ui/GenreTag'
 import AnimeCard from '../components/ui/AnimeCard'
 import ShowMore from '../components/ui/ShowMore'
 import { SkeletonPage } from '../components/ui/Skeleton'
+import { findMangaForAnime } from '../api/crosslink'
 
 export default function AnimeDetail() {
   const { id } = useParams()
@@ -20,6 +21,8 @@ export default function AnimeDetail() {
   const [epPage, setEpPage] = useState(0)
   const [hasSub, setHasSub] = useState(false)
   const [hasDub, setHasDub] = useState(false)
+  const [linkedManga, setLinkedManga] = useState(null)
+  const [mangaLoading, setMangaLoading] = useState(false)
   const { user, toggleFavorite, toggleWatchlist, audioMode, setAudioMode } = useAuth()
 
   useEffect(() => {
@@ -67,6 +70,17 @@ export default function AnimeDetail() {
       .catch(() => {})
     return () => { cancelled = true }
   }, [id])
+
+  useEffect(() => {
+    if (!anime?.relations?.length) return
+    let cancelled = false
+    setMangaLoading(true)
+    findMangaForAnime(anime.relations, anime.title)
+      .then((m) => { if (!cancelled) setLinkedManga(m) })
+      .catch(() => {})
+      .finally(() => { if (!cancelled) setMangaLoading(false) })
+    return () => { cancelled = true }
+  }, [anime?.relations, anime?.title])
 
   if (loading) return <SkeletonPage />
 
@@ -421,6 +435,79 @@ export default function AnimeDetail() {
                 <AnimeCard key={a.id} anime={a} size="normal" />
               ))}
             </div>
+          </section>
+        )}
+
+        {!mangaLoading && linkedManga && (
+          <section className="mt-10 animate-[fadeSlideUp_300ms_ease-out]">
+            <div className="flex items-center gap-2 mb-4">
+              <BookOpen className="w-5 h-5 text-primary-light" />
+              <h2 className="text-lg font-bold text-white">Read the Manga</h2>
+            </div>
+            <Link
+              to={`/manga/${linkedManga.mangaId}`}
+              className="block group"
+            >
+              <div className="bg-[#161B2E] rounded-2xl border border-white/[0.08] shadow-xl shadow-black/30 overflow-hidden hover:border-primary/30 transition-all duration-300">
+                <div className="flex flex-col md:flex-row items-stretch">
+                  <div className="w-full md:w-32 shrink-0">
+                    <div className="aspect-[3/4] md:aspect-auto md:h-full">
+                      {linkedManga.coverImage ? (
+                        <img
+                          src={linkedManga.coverImage}
+                          alt={linkedManga.title}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-gray-800 flex items-center justify-center">
+                          <BookOpen className="w-8 h-8 text-gray-600" />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex-1 p-4 md:p-6 flex flex-col justify-between gap-3">
+                    <div>
+                      <span className="inline-block px-2 py-0.5 rounded text-[10px] font-bold bg-purple-500/20 text-purple-400 border border-purple-500/30 mb-2">
+                        Manga Adaptation
+                      </span>
+                      <h3 className="text-lg font-bold text-white group-hover:text-primary-light transition-colors">
+                        {linkedManga.title}
+                      </h3>
+                      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-2 text-xs text-gray-400">
+                        <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                          linkedManga.status === 'completed' ? 'bg-green-500/20 text-green-400' :
+                          linkedManga.status === 'ongoing' ? 'bg-blue-500/20 text-blue-400' :
+                          'bg-yellow-500/20 text-yellow-400'
+                        }`}>
+                          {linkedManga.status}
+                        </span>
+                        {linkedManga.author && <span>Author: {linkedManga.author}</span>}
+                        {linkedManga.latestChapter && <span>Latest: Chapter {linkedManga.latestChapter}</span>}
+                      </div>
+                      {linkedManga.tags?.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mt-2">
+                          {linkedManga.tags.slice(0, 4).map((t) => (
+                            <span key={t} className="px-2 py-0.5 rounded-full bg-white/5 text-gray-400 text-[10px] border border-white/5">
+                              {t}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                      {linkedManga.description && (
+                        <p className="text-sm text-gray-500 mt-2 line-clamp-2">{linkedManga.description}</p>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2 pt-1">
+                      <span className="inline-flex items-center gap-2 px-5 py-2.5 bg-purple-600 hover:bg-purple-500 text-white text-sm font-semibold rounded-xl transition-all active:scale-95 shadow-lg shadow-purple-600/25">
+                        <BookOpen className="w-4 h-4" />
+                        Read from Chapter 1
+                        <ChevronRight className="w-4 h-4" />
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </Link>
           </section>
         )}
       </div>

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, useNavigate } from 'react-router-dom'
 import { Search, TrendingUp, Clock, Shuffle, BookOpen, Star, Eye, Loader2 } from 'lucide-react'
-import { getTrendingManga, getLatestManga, getRandomManga, searchManga } from '../api/mangadex'
+import { getTrendingManga, getLatestManga, getRandomManga, searchManga } from '../api/manga'
 import { SkeletonCarousel } from '../components/ui/Skeleton'
 
 function MangaCard({ manga }) {

@@ -1,7 +1,8 @@
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { ChevronLeft, ChevronRight, Loader2, BookOpen, Settings, ZoomIn, ZoomOut, RefreshCw } from 'lucide-react'
-import { getChapterPages, getMangaChapters, getMangaDetails } from '../api/mangadex'
+import { ChevronLeft, ChevronRight, Loader2, BookOpen, Settings, ZoomIn, ZoomOut, RefreshCw, Tv, Film, Play } from 'lucide-react'
+import { getChapterPages, getMangaChapters, getMangaDetails } from '../api/manga'
+import { findAnimeForManga } from '../api/crosslink'
 
 export default function MangaReader() {
   const { id, chapterId } = useParams()
@@ -20,6 +21,8 @@ export default function MangaReader() {
   const [allChapters, setAllChapters] = useState([])
   const containerRef = useRef(null)
   const [showUI, setShowUI] = useState(true)
+  const [linkedAnime, setLinkedAnime] = useState(null)
+  const [animeLoading, setAnimeLoading] = useState(false)
   const uiTimerRef = useRef(null)
 
   useEffect(() => {
@@ -53,6 +56,17 @@ export default function MangaReader() {
 
     return () => { cancelled = true }
   }, [id, chapterId, useDataSaver])
+
+  useEffect(() => {
+    if (!mangaTitle) return
+    let cancelled = false
+    setAnimeLoading(true)
+    findAnimeForManga(mangaTitle)
+      .then((a) => { if (!cancelled) setLinkedAnime(a) })
+      .catch(() => {})
+      .finally(() => { if (!cancelled) setAnimeLoading(false) })
+    return () => { cancelled = true }
+  }, [mangaTitle])
 
   const currentIndex = allChapters.findIndex((ch) => ch.id === chapterId)
   const prevChapter = currentIndex > 0 ? allChapters[currentIndex - 1] : null
@@ -160,6 +174,34 @@ export default function MangaReader() {
           </div>
         </div>
       </div>
+
+      {!animeLoading && linkedAnime && (
+        <div className="fixed top-14 left-0 right-0 z-40 px-4 animate-[fadeSlideUp_300ms_ease-out]">
+          <div className="max-w-3xl mx-auto">
+            <Link
+              to={`/anime/${linkedAnime.anilistId}`}
+              className="block group"
+            >
+              <div className="bg-[#161B2E]/95 backdrop-blur-xl rounded-xl border border-white/[0.08] px-4 py-3 hover:border-primary/30 transition-all duration-300 shadow-xl shadow-black/30">
+                <div className="flex items-center gap-3">
+                  <span className="text-lg">🎬</span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-white group-hover:text-primary-light transition-colors truncate">
+                      Prefer watching?
+                    </p>
+                    <p className="text-xs text-gray-400 truncate">
+                      These chapters are available as anime episodes. Watch {linkedAnime.title} now.
+                    </p>
+                  </div>
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-primary hover:bg-primary-dark text-white text-xs font-semibold rounded-lg transition-all active:scale-95 shrink-0">
+                    <Play className="w-3 h-3 fill-white" /> Watch
+                  </span>
+                </div>
+              </div>
+            </Link>
+          </div>
+        </div>
+      )}
 
       <div className="min-h-screen flex items-center justify-center cursor-pointer" onClick={handleClick}>
         {pages.length > 0 ? (
