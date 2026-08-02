@@ -10,14 +10,16 @@
 
 import * as mangadex from './mangadex.js'
 import * as allmanga from './allmanga.js'
+import * as asurascans from './asurascans.js'
 import { normalizeTitle, titleScore } from './util.js'
 
-const PROVIDERS = { mangadex, allmanga }
-const FALLBACK_ORDER = ['mangadex', 'allmanga']
-const MERGE_ORDER = ['mangadex', 'allmanga']
+const PROVIDERS = { mangadex, allmanga, asurascans }
+const FALLBACK_ORDER = ['mangadex', 'asurascans', 'allmanga']
+const MERGE_ORDER = ['mangadex', 'asurascans', 'allmanga']
 
-// `mangadex:<uuid>` or `allmanga:<ref>`; bare ids are treated as MangaDex for
-// backwards compatibility with any old links that were stored without a prefix.
+// `mangadex:<uuid>`, `allmanga:<ref>`, `asurascans:<slug>`. Bare ids are treated
+// as MangaDex for backwards compatibility with any old links that were stored
+// without a prefix.
 export function splitId(id) {
   const s = String(id || '')
   const i = s.indexOf(':')
@@ -102,9 +104,9 @@ async function mergeSearch(query, limit, offset) {
   return { data: merged.slice(0, limit), total }
 }
 
-// Interleave two independently-ranked lists round-robin (md[0], am[0], md[1],
-// am[1], ...) with title dedupe, so curated lists mix Japanese mainstream with
-// manhwa/webtoon titles that may only rank on one provider.
+// Interleave the independently-ranked lists round-robin (md[0], am[0], t1[0],
+// as[0], md[1], ...) with title dedupe, so curated lists mix Japanese mainstream
+// with manhwa/webtoon titles that may only rank on one provider.
 async function mergeLists(fetchByName, limit) {
   const settled = await Promise.allSettled(MERGE_ORDER.map(fetchByName))
   const lists = Object.fromEntries(
