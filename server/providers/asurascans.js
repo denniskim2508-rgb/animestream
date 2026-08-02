@@ -48,22 +48,27 @@ export async function search(query, limit = 20, offset = 0) {
 
 const PER_PAGE = 20
 
-function slicePage(items, meta, limit, offset) {
-  const start = offset % (meta?.per_page || PER_PAGE)
-  return {
-    data: items.slice(start, start + limit),
-    total: meta?.total || items.length,
+// Fetch enough pages to cover offset+limit (the client asks for up to 30).
+async function listSorted(sort, limit, offset) {
+  const startPage = Math.floor(offset / PER_PAGE) + 1
+  const endPage = Math.ceil((offset + Math.max(limit, 1)) / PER_PAGE)
+  const items = []
+  let total = 0
+  for (let page = startPage; page <= Math.min(endPage, startPage + 5); page++) {
+    const j = await api(`/series?sort=${sort}&page=${page}`)
+    total = j.meta?.total || total
+    items.push(...(j.data || []).map(mapManga))
+    if (!j.meta?.has_more) break
   }
+  return { data: items.slice(offset % PER_PAGE, offset % PER_PAGE + limit), total }
 }
 
 export async function trending(limit = 20, offset = 0) {
-  const j = await api(`/series?sort=popular&page=${Math.floor(offset / PER_PAGE) + 1}`)
-  return slicePage((j.data || []).map(mapManga), j.meta, limit, offset)
+  return listSorted('popular', limit, offset)
 }
 
 export async function latest(limit = 20, offset = 0) {
-  const j = await api(`/series?sort=latest&page=${Math.floor(offset / PER_PAGE) + 1}`)
-  return slicePage((j.data || []).map(mapManga), j.meta, limit, offset)
+  return listSorted('latest', limit, offset)
 }
 
 export async function lookup(candidates, strict = false) {
