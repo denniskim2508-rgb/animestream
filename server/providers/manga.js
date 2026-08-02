@@ -5,21 +5,28 @@
 // List endpoints (search/trending/latest) query EVERY provider in parallel and
 // merge the results, so a title that only exists on one provider still shows up.
 // Single-item operations (detail/chapters/pages/lookup) route by opaque id or
-// fall back MangaDex → AllManga. More adapters can be added to the registry
-// without touching the API layer.
+// fall back through the readable providers (Kitsu adds lookup coverage only,
+// since it has no reader). More adapters can be added to the registry without
+// touching the API layer.
 
 import * as mangadex from './mangadex.js'
 import * as allmanga from './allmanga.js'
 import * as asurascans from './asurascans.js'
+import * as mangapill from './mangapill.js'
+import * as kitsu from './kitsu.js'
 import { normalizeTitle, titleScore } from './util.js'
 
-const PROVIDERS = { mangadex, allmanga, asurascans }
-const FALLBACK_ORDER = ['mangadex', 'asurascans', 'allmanga']
-const MERGE_ORDER = ['mangadex', 'asurascans', 'allmanga']
+const PROVIDERS = { mangadex, allmanga, asurascans, mangapill, kitsu }
+const FALLBACK_ORDER = ['mangadex', 'asurascans', 'mangapill', 'allmanga']
+const MERGE_ORDER = ['mangadex', 'asurascans', 'mangapill', 'allmanga']
 
-// `mangadex:<uuid>`, `allmanga:<ref>`, `asurascans:<slug>`. Bare ids are treated
-// as MangaDex for backwards compatibility with any old links that were stored
-// without a prefix.
+// Cross-link lookups additionally fall back to Kitsu (metadata only, no reader)
+// as a last resort so obscure titles still surface as manga info.
+const LOOKUP_ORDER = [...FALLBACK_ORDER, 'kitsu']
+
+// `mangadex:<uuid>`, `allmanga:<ref>`, `asurascans:<slug>`, `mangapill:<id>`.
+// Bare ids are treated as MangaDex for backwards compatibility with any old
+// links that were stored without a prefix.
 export function splitId(id) {
   const s = String(id || '')
   const i = s.indexOf(':')
@@ -149,7 +156,7 @@ export async function random() {
 }
 
 export async function lookup(candidates, strict = false) {
-  for (const name of FALLBACK_ORDER) {
+  for (const name of LOOKUP_ORDER) {
     try {
       const found = await PROVIDERS[name].lookup(candidates, strict)
       if (found) return { data: found, provider: name }
