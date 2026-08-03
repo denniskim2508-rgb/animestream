@@ -13,6 +13,7 @@ import * as mangadex from './mangadex.js'
 import * as allmanga from './allmanga.js'
 import * as asurascans from './asurascans.js'
 import * as mangapill from './mangapill.js'
+import * as atsu from './atsu.js'
 import * as kitsu from './kitsu.js'
 import { normalizeTitle, titleScore } from './util.js'
 import { validPageUrls } from './interface.js'
@@ -25,16 +26,18 @@ const PROVIDERS = {
   allmanga: allmanga.provider,
   asurascans: asurascans.provider,
   mangapill: mangapill.provider,
+  atsu: atsu.provider,
   kitsu: kitsu.provider,
 }
-const FALLBACK_ORDER = ['mangadex', 'asurascans', 'mangapill', 'allmanga']
-const MERGE_ORDER = ['mangadex', 'asurascans', 'mangapill', 'allmanga']
+const FALLBACK_ORDER = ['mangadex', 'asurascans', 'mangapill', 'atsu', 'allmanga']
+const MERGE_ORDER = ['mangadex', 'asurascans', 'mangapill', 'atsu', 'allmanga']
 
 // Cross-link lookups additionally fall back to Kitsu (metadata only, no reader)
 // as a last resort so obscure titles still surface as manga info.
 const LOOKUP_ORDER = [...FALLBACK_ORDER, 'kitsu']
 
-// `mangadex:<uuid>`, `allmanga:<ref>`, `asurascans:<slug>`, `mangapill:<id>`.
+// `mangadex:<uuid>`, `allmanga:<ref>`, `asurascans:<slug>`, `mangapill:<id>`,
+// `atsu:<mangaId>:<chapterId>`.
 // Bare ids are treated as MangaDex for backwards compatibility with any old
 // links that were stored without a prefix.
 export function splitId(id) {
@@ -296,7 +299,7 @@ function deriveMangaId(chapterId) {
   if (!rest) return null
   const [first] = rest.split(':')
   if (!first) return null
-  if (provider === 'allmanga' || provider === 'asurascans' || provider === 'mangapill') {
+  if (provider === 'allmanga' || provider === 'asurascans' || provider === 'mangapill' || provider === 'atsu') {
     return `${provider}:${first}`
   }
   return null
