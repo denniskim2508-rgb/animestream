@@ -1,4 +1,5 @@
 import { titleScore, normalizeTitle, isDoujinshiOrColored, encodeHeaders } from './util.js'
+import { normalizeProvider } from './interface.js'
 
 const API = 'https://api.allanime.day/api'
 const SITE = 'https://allmanga.to'
@@ -195,6 +196,15 @@ export async function pages(ref) {
   const edge = edges.find((e) => e.chapterString === chapterString) || edges[0]
   if (!edge) throw new Error('AllManga: chapter not found')
 
-  const urls = (edge.pictureUrls || []).map((u) => proxied(`${IMG_HEAD}/${u.url}`))
+  // The API usually supplies the per-chapter CDN base (pictureUrlHead); only fall
+  // back to the hardcoded host when it is absent so we never guess at a stale CDN.
+  const head = (edge.pictureUrlHead || IMG_HEAD).replace(/\/+$/, '')
+  const urls = (edge.pictureUrls || [])
+    .map((u) => {
+      const target = u.url.startsWith('http') ? u.url : `${head}/${u.url.replace(/^\/+/, '')}`
+      return proxied(target)
+    })
   return { pages: urls, pagesSd: urls, hash: null, baseUrl: null }
 }
+
+export const provider = normalizeProvider('allmanga', { search, detail, chapters, pages, trending, latest, random, lookup })

@@ -1,4 +1,5 @@
 import { titleScore, normalizeTitle, isDoujinshiOrColored, encodeHeaders } from './util.js'
+import { normalizeProvider } from './interface.js'
 
 const SITE = 'https://mangapill.com'
 const PROVIDER = 'mangapill'
@@ -225,3 +226,5 @@ export async function random() {
     return { data: null }
   }
 }
+
+export const provider = normalizeProvider('mangapill', { search, detail, chapters, pages, trending, latest, random, lookup })

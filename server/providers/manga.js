@@ -15,8 +15,18 @@ import * as asurascans from './asurascans.js'
 import * as mangapill from './mangapill.js'
 import * as kitsu from './kitsu.js'
 import { normalizeTitle, titleScore } from './util.js'
+import { validPageUrls } from './interface.js'
+import { rememberProvider, rememberedProvider } from './prefs.js'
 
-const PROVIDERS = { mangadex, allmanga, asurascans, mangapill, kitsu }
+// Every adapter is normalized onto the shared interface (interface.js) so the
+// manager can route and fall back between providers uniformly.
+const PROVIDERS = {
+  mangadex: mangadex.provider,
+  allmanga: allmanga.provider,
+  asurascans: asurascans.provider,
+  mangapill: mangapill.provider,
+  kitsu: kitsu.provider,
+}
 const FALLBACK_ORDER = ['mangadex', 'asurascans', 'mangapill', 'allmanga']
 const MERGE_ORDER = ['mangadex', 'asurascans', 'mangapill', 'allmanga']
 
@@ -184,8 +194,25 @@ export async function chapters(id, lang = 'en', limit = 100, offset = 0) {
   if (!isEmpty(primary)) return { ...primary, provider }
 
   // The owning provider has no readable chapters here (licensed/removed/external
-  // chapters only). Find the same title on another provider and return its
-  // chapters instead, so the reader never shows an empty/black chapter.
+  // chapters only). First try a previously remembered fallback provider for this
+  // manga id — repeat visits skip the expensive cross-provider search entirely.
+  const byId = rememberedProvider(id)
+  if (byId?.provider && byId.provider !== provider && byId.sourceId) {
+    try {
+      const res = await PROVIDERS[byId.provider].chapters(splitId(byId.sourceId).ref, lang, limit, offset)
+      if (!isEmpty(res)) {
+        rememberProvider(id, byId.provider, byId.sourceId)
+        return { ...res, provider: byId.provider, source: byId.sourceId }
+      }
+      console.warn(`[manga] remembered provider ${byId.provider} no longer serves chapters for ${id}`)
+    } catch (err) {
+      console.error(`[manga] remembered provider ${byId.provider} chapters failed:`, err.message)
+    }
+  }
+
+  // No memory for this exact id — find the same title on another provider. A
+  // title-keyed memory hit covers the same series reached via a different
+  // provider card, so check that before searching every provider.
   try {
     const det = await PROVIDERS[provider].detail(ref)
     const d = det?.data
@@ -195,10 +222,28 @@ export async function chapters(id, lang = 'en', limit = 100, offset = 0) {
       const key = normalizeTitle(title)
       if (!key || seen.has(key)) continue
       seen.add(key)
+
+      const byTitle = rememberedProvider(key)
+      if (byTitle?.provider && byTitle.provider !== provider && byTitle.sourceId) {
+        try {
+          const res = await PROVIDERS[byTitle.provider].chapters(splitId(byTitle.sourceId).ref, lang, limit, offset)
+          if (!isEmpty(res)) {
+            rememberProvider(id, byTitle.provider, byTitle.sourceId)
+            return { ...res, provider: byTitle.provider, source: byTitle.sourceId }
+          }
+        } catch (err) {
+          console.error(`[manga] remembered provider ${byTitle.provider} chapters failed:`, err.message)
+        }
+      }
+
       const src = await findChapterSource(title, provider)
       if (!src) continue
       const res = await PROVIDERS[src.name].chapters(splitId(src.id).ref, lang, limit, offset)
-      if (!isEmpty(res)) return { ...res, provider: src.name, source: src.id }
+      if (!isEmpty(res)) {
+        rememberProvider(id, src.name, src.id)
+        rememberProvider(key, src.name, src.id)
+        return { ...res, provider: src.name, source: src.id }
+      }
     }
   } catch (err) {
     console.error('[manga] chapter fallback failed:', err.message)
@@ -240,7 +285,138 @@ function fuzzyTitleScore(query, title) {
   return (common * 2) / (a.length + b.length)
 }
 
-export async function pages(chapterId) {
+// Recover the owning manga's opaque id from a chapter id where possible.
+// MangaDex chapter ids are chapter uuids, so the caller passes the manga id.
+function deriveMangaId(chapterId) {
+  const s = String(chapterId || '')
+  const i = s.indexOf(':')
+  if (i === -1) return null
+  const provider = s.slice(0, i)
+  const rest = s.slice(i + 1)
+  if (!rest) return null
+  const [first] = rest.split(':')
+  if (!first) return null
+  if (provider === 'allmanga' || provider === 'asurascans' || provider === 'mangapill') {
+    return `${provider}:${first}`
+  }
+  return null
+}
+
+function deriveChapterNum(chapterId) {
+  const s = String(chapterId || '')
+  const m = s.match(/chapter-([\d.]+)/i)
+  if (m) return parseFloat(m[1])
+  const i = s.indexOf(':')
+  if (i === -1) return null
+  const provider = s.slice(0, i)
+  const rest = s.slice(i + 1)
+  if (provider === 'allmanga') {
+    const [, ch] = rest.split(':')
+    return ch != null ? parseFloat(ch) : null
+  }
+  return null
+}
+
+// Pages came back empty or with unusable URLs (e.g. AllManga now captcha-gates
+// chapter reads). Resolve the same chapter number on another provider for the
+// same series so the reader renders real pages instead of a black screen.
+async function fallbackPages(chapterId, provider, mangaId, chapterNum) {
+  const ownManga = mangaId || deriveMangaId(chapterId)
+  if (!ownManga) {
+    console.error(`[manga] pages fallback: no mangaId for ${chapterId}`)
+    return null
+  }
+
+  let title
+  let altTitles = []
+  try {
+    const d = (await PROVIDERS[splitId(ownManga).provider].detail(splitId(ownManga).ref))?.data
+    title = d?.title
+    altTitles = Array.isArray(d?.altTitles) ? d.altTitles : []
+  } catch (err) {
+    console.error('[manga] pages fallback: detail failed:', err.message)
+    return null
+  }
+  if (!title) {
+    console.error('[manga] pages fallback: no title to match on')
+    return null
+  }
+
+  // Resolve the chapter number: caller-supplied, derived from the id, or for
+  // MangaDex look it up by matching the chapter uuid in the feed.
+  let num = chapterNum
+  if (num == null) {
+    if (provider === 'mangadex') {
+      try {
+        const { data } = await PROVIDERS.mangadex.chapters(splitId(ownManga).ref, 'en', 500, 0)
+        const cur = data.find((c) => splitId(c.id).ref === chapterId.slice('mangadex:'.length))
+        if (cur?.chapter != null) num = cur.chapter
+      } catch (err) {
+        console.error('[manga] pages fallback: mangadex chapter lookup failed:', err.message)
+      }
+    } else {
+      num = deriveChapterNum(chapterId)
+    }
+  }
+  if (num == null) {
+    console.error(`[manga] pages fallback: could not resolve chapter number for ${chapterId}`)
+    return null
+  }
+
+  const seen = new Set()
+  for (const t of [title, ...altTitles]) {
+    if (!t) continue
+    const key = normalizeTitle(t)
+    if (!key || seen.has(key)) continue
+    seen.add(key)
+    for (const name of FALLBACK_ORDER) {
+      if (name === provider) continue
+      try {
+        const res = await PROVIDERS[name].search(t, 20, 0)
+        let best = null
+        let bestScore = 0
+        for (const item of res.data) {
+          const score = Math.max(titleScore(t, item.title), fuzzyTitleScore(t, item.title))
+          if (score > bestScore) {
+            bestScore = score
+            best = item
+          }
+        }
+        if (!best || bestScore < 0.6) continue
+        const { data } = await PROVIDERS[name].chapters(splitId(best.id).ref, 'en', 500, 0)
+        const match = data.find((c) => c.chapter != null && Math.abs(c.chapter - num) < 0.001)
+        if (!match) continue
+        const pagesRes = await PROVIDERS[name].pages(splitId(match.id).ref)
+        if (validPageUrls(pagesRes.pages)) {
+          console.log(`[manga] pages fallback ok | chapter=${match.id} | provider=${name} | pages=${pagesRes.pages.length}`)
+          return { ...pagesRes, provider: name, source: match.id }
+        }
+        console.warn(`[manga] pages fallback ${name}: chapter ${match.id} has no readable pages`)
+      } catch (err) {
+        console.error(`[manga] pages fallback ${name} failed:`, err.message)
+      }
+    }
+  }
+  return null
+}
+
+export async function pages(chapterId, { mangaId, chapterNum } = {}) {
   const { provider, ref } = splitId(chapterId)
-  return PROVIDERS[provider].pages(ref)
+  let primary
+  try {
+    primary = await PROVIDERS[provider].pages(ref)
+  } catch (err) {
+    console.error(`[manga] ${provider} pages failed:`, err.message)
+    primary = { pages: [], pagesSd: [], hash: null, baseUrl: null }
+  }
+  if (validPageUrls(primary.pages)) return { ...primary, provider }
+
+  console.warn(`[manga] pages empty/invalid | chapterId=${chapterId} | provider=${provider} | pages=${(primary.pages || []).length}`)
+  const fallback = await fallbackPages(chapterId, provider, mangaId, chapterNum)
+  if (fallback) {
+    const mangaKey = mangaId || deriveMangaId(chapterId)
+    if (mangaKey) rememberProvider(mangaKey, fallback.provider, fallback.source)
+    return fallback
+  }
+  return { ...primary, provider }
 }

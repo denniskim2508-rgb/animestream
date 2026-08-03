@@ -1,4 +1,5 @@
 import { titleScore, normalizeTitle, isDoujinshiOrColored } from './util.js'
+import { normalizeProvider } from './interface.js'
 
 const API = 'https://kitsu.io/api/edge'
 const PROVIDER = 'kitsu'
@@ -136,3 +137,5 @@ export async function pages() {
 export async function random() {
   return { data: null }
 }
+
+export const provider = normalizeProvider('kitsu', { search, detail, chapters, pages, trending, latest, random, lookup })

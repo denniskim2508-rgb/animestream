@@ -58,8 +58,9 @@ export async function getMangaChapters(id, lang = 'en', limit = 100, offset = 0)
   return { data: json.data || [], total: json.total || 0 }
 }
 
-export async function getChapterPages(chapterId) {
-  const res = await fetch(`${BASE}/chapter/${encodeURIComponent(chapterId)}`)
+export async function getChapterPages(chapterId, mangaId) {
+  const qs = mangaId ? `?manga=${encodeURIComponent(mangaId)}` : ''
+  const res = await fetch(`${BASE}/chapter/${encodeURIComponent(chapterId)}${qs}`)
   if (!res.ok) throw new Error('Failed to fetch chapter pages')
   return res.json()
 }

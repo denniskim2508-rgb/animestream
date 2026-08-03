@@ -38,13 +38,22 @@ export default function MangaReader() {
     setUseFullRes(false)
 
     Promise.all([
-      getChapterPages(chapterId),
+      getChapterPages(chapterId, id),
       getMangaDetails(id).catch(() => null),
     ]).then(([pageData, manga]) => {
       if (cancelled) return
       setPagesSd(pageData.pagesSd || [])
       setPagesFull(pageData.pages || [])
       if (manga) setMangaTitle(manga.title)
+      console.log('[MangaReader] chapter loaded', {
+        mangaId: id,
+        chapterId,
+        provider: pageData.provider,
+        source: pageData.source,
+        pages: pageData.pages?.length ?? 0,
+        pagesSd: pageData.pagesSd?.length ?? 0,
+        firstUrl: pageData.pages?.[0] ?? null,
+      })
     }).catch((err) => {
       if (!cancelled) setError(err.message || 'Failed to load chapter')
     }).finally(() => {
@@ -257,7 +266,15 @@ export default function MangaReader() {
             })}
           </div>
         ) : (
-          <p className="text-gray-500 text-sm">No pages found.</p>
+          <div className="text-center">
+            <p className="text-gray-400 mb-4">No readable pages found for this chapter.</p>
+            <Link
+              to={`/manga/${id}`}
+              className="px-4 py-2 bg-primary text-white rounded-lg text-sm"
+            >
+              Back to Details
+            </Link>
+          </div>
         )}
       </div>
 

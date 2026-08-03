@@ -36,3 +36,6 @@ server_out.txt
 
 # Test files
 test_*.mjs
+
+# Runtime provider memory (which provider serves each manga)
+server/providers/.provider-prefs.json

@@ -1,4 +1,5 @@
 import { normalizeTitle, titleScore, isDoujinshiOrColored } from './util.js'
+import { normalizeProvider } from './interface.js'
 
 const API = 'https://api.mangadex.org'
 const COVERS = 'https://uploads.mangadex.org/covers'
@@ -187,3 +188,5 @@ export async function pages(ref) {
   const pagesSd = (chapter.dataSaver || []).map((f) => `${baseUrl}/data-saver/${hash}/${f}`)
   return { pages, pagesSd, hash, baseUrl }
 }
+
+export const provider = normalizeProvider('mangadex', { search, detail, chapters, pages, trending, latest, random, lookup })

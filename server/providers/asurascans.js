@@ -1,4 +1,5 @@
 import { titleScore, normalizeTitle, isDoujinshiOrColored } from './util.js'
+import { normalizeProvider } from './interface.js'
 
 const API = 'https://api.asurascans.com/api'
 const PROVIDER = 'asurascans'
@@ -140,3 +141,5 @@ export async function random() {
   const item = items[Math.floor(Math.random() * items.length)] || null
   return { data: item }
 }
+
+export const provider = normalizeProvider('asurascans', { search, detail, chapters, pages, trending, latest, random, lookup })

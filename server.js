@@ -236,11 +236,14 @@ app.get('/api/media/proxy', async (req, res) => {
     })
 
     if (!response.ok) {
+      console.error(`[media] proxy | ${url.substring(0, 120)} | upstream=${response.status}`)
       return res.status(response.status).send(`Upstream ${response.status}`)
     }
 
     const contentType = response.headers.get('content-type') || ''
     const isM3u8 = contentType.includes('mpegurl') || contentType.includes('m3u8') || url.includes('.m3u8')
+
+    console.log(`[media] proxy | ${url.substring(0, 120)}... | upstream=${response.status} | ct=${contentType}`)
 
     if (isM3u8) {
       const text = await response.text()
@@ -260,7 +263,7 @@ app.get('/api/media/proxy', async (req, res) => {
     const buffer = await response.arrayBuffer()
     res.send(Buffer.from(buffer))
   } catch (err) {
-    console.error('[media] proxy error:', err.message)
+    console.error(`[media] proxy error | ${String(url || '').substring(0, 120)} | ${err.message}`)
     res.status(500).send('Proxy error')
   }
 })
@@ -336,7 +339,19 @@ app.get('/api/manga/random', async (_req, res) => {
 
 app.get('/api/manga/chapter/:id', async (req, res) => {
   try {
-    const pageData = await manga.pages(req.params.id)
+    const chapterId = req.params.id
+    const { manga: mangaId, num } = req.query
+    const pageData = await manga.pages(chapterId, {
+      mangaId,
+      chapterNum: num != null ? Number(num) : undefined,
+    })
+    const provider = pageData.provider || manga.splitId(chapterId).provider
+    console.log(
+      `[manga] chapter pages | id=${chapterId} | provider=${provider} | pages=${pageData.pages?.length ?? 0} | pagesSd=${pageData.pagesSd?.length ?? 0}`
+    )
+    for (const [i, u] of (pageData.pages || []).entries()) {
+      console.log(`[manga]   page[${i}] ${u}`)
+    }
     res.json(pageData)
   } catch (err) {
     console.error('[manga] chapter pages error:', err.message)
@@ -358,6 +373,7 @@ app.get('/api/manga/:id/chapters', async (req, res) => {
   try {
     const { lang = 'en', limit = 100, offset = 0 } = req.query
     const { data, total, provider } = await manga.chapters(req.params.id, lang, Number(limit), Number(offset))
+    console.log(`[manga] chapters | mangaId=${req.params.id} | provider=${provider} | total=${total} | returned=${data.length}`)
     res.json({ data, total, provider })
   } catch (err) {
     console.error('[manga] chapters error:', err.message)
