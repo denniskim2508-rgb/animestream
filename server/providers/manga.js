@@ -185,73 +185,174 @@ export async function detail(id) {
   return PROVIDERS[provider].detail(ref)
 }
 
+function byChapterAsc(a, b) {
+  const na = a.chapter
+  const nb = b.chapter
+  if (na != null && nb != null) return na - nb
+  if (na == null && nb == null) return 0
+  return na == null ? 1 : -1
+}
+
+// Complete chapter lists are cached per (provider, ref, lang) so paginated
+// requests stay fast and every page is an ascending slice of the same list.
+const chapterCache = new Map()
+const CHAPTER_CACHE_TTL = 10 * 60 * 1000
+const CHAPTER_CACHE_MAX = 200
+
+function chapterCacheKey(providerName, ref, lang) {
+  return `${providerName}:${ref}:${lang}`
+}
+
+function getCachedChapters(providerName, ref, lang) {
+  const entry = chapterCache.get(chapterCacheKey(providerName, ref, lang))
+  if (!entry || Date.now() > entry.exp) return null
+  return entry.data
+}
+
+function setCachedChapters(providerName, ref, lang, data) {
+  if (chapterCache.size >= CHAPTER_CACHE_MAX) {
+    const oldest = chapterCache.keys().next().value
+    chapterCache.delete(oldest)
+  }
+  chapterCache.set(chapterCacheKey(providerName, ref, lang), { data, exp: Date.now() + CHAPTER_CACHE_TTL })
+}
+
+// Fetch the complete chapter list from a provider, ascending. Providers either
+// hand over the whole series in one call (when asked for a large page) or page
+// by offset — loop until a page comes back short or empty.
+async function fetchAllChapters(provider, ref, lang) {
+  const all = []
+  const pageSize = 500
+  for (let i = 0; i < 40; i++) {
+    const res = await provider.chapters(ref, lang, pageSize, all.length)
+    const batch = Array.isArray(res?.data) ? res.data : []
+    if (!batch.length) break
+    all.push(...batch)
+    if (batch.length < pageSize) break
+  }
+  return [...all].sort(byChapterAsc)
+}
+
+// Normalize a chapter list for the client: ascending order (Chapter 1 → latest)
+// regardless of the provider's native order, plus a real total. The provider's
+// reported total is preferred; when it's missing, the count comes from fetching
+// the complete chapter list so it isn't just the size of the current page.
+async function normalizeChapters(res, providerName, ref, lang, limit, offset) {
+  let data = Array.isArray(res?.data) ? res.data : []
+  const providerTotal = Number(res?.total)
+  let total = Number.isFinite(providerTotal) && providerTotal > 0 ? providerTotal : 0
+  const hasTotal = total > 0
+
+  // A provider may return only a page of its full list (e.g. a descending slice
+  // of the newest chapters) — sorting just that page would break the global
+  // ascending order once the client pages further, so pull the whole list.
+  if (!hasTotal || data.length !== total) {
+    let full = getCachedChapters(providerName, ref, lang)
+    if (!full) {
+      try {
+        full = await fetchAllChapters(PROVIDERS[providerName], ref, lang)
+        setCachedChapters(providerName, ref, lang, full)
+      } catch (err) {
+        console.error(`[manga] full chapter list for ${providerName}:${ref} failed:`, err.message)
+      }
+    }
+    if (full) {
+      data = full
+      if (!hasTotal) total = data.length
+    }
+  }
+
+  const sorted = [...data].sort(byChapterAsc)
+  return { data: sorted.slice(offset, offset + limit), total, provider: providerName }
+}
+
 export async function chapters(id, lang = 'en', limit = 100, offset = 0) {
   const { provider, ref } = splitId(id)
-  let primary
+  let resolved = null
+  let sourceProvider = provider
+  let source = null
+
+  // The owning provider serves the list directly when it has readable chapters.
   try {
-    primary = await PROVIDERS[provider].chapters(ref, lang, limit, offset)
+    const primary = await PROVIDERS[provider].chapters(ref, lang, limit, offset)
+    if (!isEmpty(primary)) resolved = primary
   } catch (err) {
     console.error(`[manga] ${provider} chapters failed:`, err.message)
-    primary = { data: [], total: 0 }
   }
-  if (!isEmpty(primary)) return { ...primary, provider }
 
   // The owning provider has no readable chapters here (licensed/removed/external
   // chapters only). First try a previously remembered fallback provider for this
   // manga id — repeat visits skip the expensive cross-provider search entirely.
-  const byId = rememberedProvider(id)
-  if (byId?.provider && byId.provider !== provider && byId.sourceId) {
-    try {
-      const res = await PROVIDERS[byId.provider].chapters(splitId(byId.sourceId).ref, lang, limit, offset)
-      if (!isEmpty(res)) {
-        rememberProvider(id, byId.provider, byId.sourceId)
-        return { ...res, provider: byId.provider, source: byId.sourceId }
+  if (!resolved) {
+    const byId = rememberedProvider(id)
+    if (byId?.provider && byId.provider !== provider && byId.sourceId) {
+      try {
+        const res = await PROVIDERS[byId.provider].chapters(splitId(byId.sourceId).ref, lang, limit, offset)
+        if (!isEmpty(res)) {
+          rememberProvider(id, byId.provider, byId.sourceId)
+          resolved = res
+          sourceProvider = byId.provider
+          source = byId.sourceId
+        } else {
+          console.warn(`[manga] remembered provider ${byId.provider} no longer serves chapters for ${id}`)
+        }
+      } catch (err) {
+        console.error(`[manga] remembered provider ${byId.provider} chapters failed:`, err.message)
       }
-      console.warn(`[manga] remembered provider ${byId.provider} no longer serves chapters for ${id}`)
-    } catch (err) {
-      console.error(`[manga] remembered provider ${byId.provider} chapters failed:`, err.message)
     }
   }
 
   // No memory for this exact id — find the same title on another provider. A
   // title-keyed memory hit covers the same series reached via a different
   // provider card, so check that before searching every provider.
-  try {
-    const det = await PROVIDERS[provider].detail(ref)
-    const d = det?.data
-    const seen = new Set()
-    for (const title of [d?.title, ...(Array.isArray(d?.altTitles) ? d.altTitles : [])]) {
-      if (!title) continue
-      const key = normalizeTitle(title)
-      if (!key || seen.has(key)) continue
-      seen.add(key)
+  if (!resolved) {
+    try {
+      const det = await PROVIDERS[provider].detail(ref)
+      const d = det?.data
+      const seen = new Set()
+      for (const title of [d?.title, ...(Array.isArray(d?.altTitles) ? d.altTitles : [])]) {
+        if (!title) continue
+        const key = normalizeTitle(title)
+        if (!key || seen.has(key)) continue
+        seen.add(key)
 
-      const byTitle = rememberedProvider(key)
-      if (byTitle?.provider && byTitle.provider !== provider && byTitle.sourceId) {
-        try {
-          const res = await PROVIDERS[byTitle.provider].chapters(splitId(byTitle.sourceId).ref, lang, limit, offset)
-          if (!isEmpty(res)) {
-            rememberProvider(id, byTitle.provider, byTitle.sourceId)
-            return { ...res, provider: byTitle.provider, source: byTitle.sourceId }
+        const byTitle = rememberedProvider(key)
+        if (byTitle?.provider && byTitle.provider !== provider && byTitle.sourceId) {
+          try {
+            const res = await PROVIDERS[byTitle.provider].chapters(splitId(byTitle.sourceId).ref, lang, limit, offset)
+            if (!isEmpty(res)) {
+              rememberProvider(id, byTitle.provider, byTitle.sourceId)
+              resolved = res
+              sourceProvider = byTitle.provider
+              source = byTitle.sourceId
+              break
+            }
+          } catch (err) {
+            console.error(`[manga] remembered provider ${byTitle.provider} chapters failed:`, err.message)
           }
-        } catch (err) {
-          console.error(`[manga] remembered provider ${byTitle.provider} chapters failed:`, err.message)
+        }
+        if (resolved) break
+
+        const src = await findChapterSource(title, provider)
+        if (!src) continue
+        const res = await PROVIDERS[src.name].chapters(splitId(src.id).ref, lang, limit, offset)
+        if (!isEmpty(res)) {
+          rememberProvider(id, src.name, src.id)
+          rememberProvider(key, src.name, src.id)
+          resolved = res
+          sourceProvider = src.name
+          source = src.id
+          break
         }
       }
-
-      const src = await findChapterSource(title, provider)
-      if (!src) continue
-      const res = await PROVIDERS[src.name].chapters(splitId(src.id).ref, lang, limit, offset)
-      if (!isEmpty(res)) {
-        rememberProvider(id, src.name, src.id)
-        rememberProvider(key, src.name, src.id)
-        return { ...res, provider: src.name, source: src.id }
-      }
+    } catch (err) {
+      console.error('[manga] chapter fallback failed:', err.message)
     }
-  } catch (err) {
-    console.error('[manga] chapter fallback failed:', err.message)
   }
-  return { ...primary, provider }
+
+  if (!resolved) return normalizeChapters({ data: [], total: 0 }, provider, ref, lang, limit, offset)
+  const normRef = source ? splitId(source).ref : ref
+  return normalizeChapters(resolved, sourceProvider, normRef, lang, limit, offset)
 }
 
 // Search each readable provider for the closest title match so the chapter

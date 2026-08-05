@@ -174,7 +174,7 @@ export async function detail(ref) {
 
 export async function chapters(ref, lang = 'en', limit = 100, offset = 0) {
   const data = await mangadexFetch(
-    `${API}/manga/${ref}/feed?limit=${limit}&offset=${offset}&translatedLanguage[]=${lang}&order[chapter]=desc&includes[]=scanlation_group`
+    `${API}/manga/${ref}/feed?limit=${limit}&offset=${offset}&translatedLanguage[]=${lang}&order[chapter]=asc&includes[]=scanlation_group`
   )
   return mapChapters(data)
 }

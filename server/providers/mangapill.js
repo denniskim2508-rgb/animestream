@@ -181,10 +181,12 @@ export async function chapters(ref, _lang = 'en', limit = 100, offset = 0) {
     if (seen.has(idPart)) continue
     seen.add(idPart)
     const text = clean(m[3])
-    const num = (text.match(/\d+/) || [])[0]
+    // The anchor text is prefixed with a group label (e.g. "Group 2 Chapter
+    // 386"), so the first number is wrong — read the number from the slug.
+    const numMatch = m[2].match(/chapter-(\d+(?:\.\d+)?)/i) || text.match(/(\d+)\s*$/)
     out.push({
       id: `${PROVIDER}:${ref}:${idPart}/${m[2]}`,
-      chapter: num !== undefined ? Number(num) : null,
+      chapter: numMatch ? parseFloat(numMatch[1]) : null,
       title: text,
       volume: null,
       lang: 'en',

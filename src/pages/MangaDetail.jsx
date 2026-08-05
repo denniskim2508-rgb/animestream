@@ -10,6 +10,8 @@ export default function MangaDetail() {
   const { id } = useParams()
   const [manga, setManga] = useState(null)
   const [chapters, setChapters] = useState([])
+  const [chaptersTotal, setChaptersTotal] = useState(0)
+  const [chaptersEnded, setChaptersEnded] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [chPage, setChPage] = useState(0)
@@ -24,6 +26,8 @@ export default function MangaDetail() {
     setLoading(true)
     setError(null)
     setChPage(0)
+    setChaptersTotal(0)
+    setChaptersEnded(false)
 
     getMangaDetails(id)
       .then((data) => {
@@ -49,6 +53,8 @@ export default function MangaDetail() {
       .then((res) => {
         if (!cancelled) {
           setChapters((prev) => chPage === 0 ? res.data : [...prev, ...res.data])
+          if (chPage === 0 && res.total > 0) setChaptersTotal(res.total)
+          if (res.data.length < perPage) setChaptersEnded(true)
           setChLoading(false)
         }
       })
@@ -68,6 +74,10 @@ export default function MangaDetail() {
   }, [manga?.title])
 
   const loadMore = () => setChPage((p) => p + 1)
+
+  const showLoadMore = chapters.length > 0 && !chaptersEnded && (
+    chaptersTotal > 0 ? chapters.length < chaptersTotal : chapters.length % perPage === 0
+  )
 
   if (loading) return <SkeletonPage />
   if (error) return (
@@ -164,7 +174,7 @@ export default function MangaDetail() {
 
         <div className="mt-8">
           <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
-            <BookOpen className="w-5 h-5 text-primary-light" /> Chapters ({chapters.length})
+            <BookOpen className="w-5 h-5 text-primary-light" /> Chapters {chaptersTotal > 0 && `(${chaptersTotal})`}
           </h2>
 
           {chapters.length === 0 && !chLoading ? (
@@ -201,7 +211,7 @@ export default function MangaDetail() {
                   <Loader2 className="w-5 h-5 text-primary animate-spin" />
                 </div>
               )}
-              {!chLoading && chapters.length % perPage === 0 && chapters.length > 0 && (
+              {!chLoading && showLoadMore && (
                 <button
                   onClick={loadMore}
                   className="w-full py-3 text-sm text-primary-light hover:text-white border border-white/5 hover:border-primary/30 rounded-lg transition-colors"
