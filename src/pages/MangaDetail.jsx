@@ -111,6 +111,8 @@ export default function MangaDetail() {
       .filter((e) => candidates.some((c) => String(c.anilistId) === String(e.animeId)))
       .sort((a, b) => Number(b.episode) - Number(a.episode))[0]
     if (!watched) {
+      console.log('[MangaDetail] continue-reading: no watched anime among candidates',
+        candidates.map((c) => c.anilistId))
       setAdaptation(null)
       setContinueChapterId(null)
       return
@@ -118,15 +120,22 @@ export default function MangaDetail() {
 
     let cancelled = false
     setAdaptationLoading(true)
+    console.log('[MangaDetail] continue-reading watched:', {
+      animeId: watched.animeId, title: watched.title, episode: watched.episode, completed: watched.completed,
+    })
     getAdaptation(watched.animeId, watched.episode)
       .then((res) => {
         if (cancelled || !res?.nextChapter) {
           if (!cancelled) setAdaptation(null)
           return
         }
+        console.log('[MangaDetail] adaptation resolved:', res)
         setAdaptation({ ...res, animeTitle: watched.title || res.animeTitle, watchedEpisode: watched.episode })
         return findChapterByNumber(id, res.nextChapter).then((ch) => {
-          if (!cancelled) setContinueChapterId(ch?.id || null)
+          if (!cancelled) {
+            console.log('[MangaDetail] continue-reading chapter:', ch?.id, 'for chapter number', res.nextChapter)
+            setContinueChapterId(ch?.id || null)
+          }
         })
       })
       .catch(() => { if (!cancelled) setAdaptation(null) })

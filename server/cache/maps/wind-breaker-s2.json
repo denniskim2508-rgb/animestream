@@ -1,0 +1,114 @@
+{
+  "series": "s2",
+  "title": "Wind Breaker (Season 2)",
+  "episodes": {
+    "1": {
+      "chapters": [
+        42
+      ],
+      "filler": false,
+      "firstChapter": 42,
+      "lastChapter": 42,
+      "nextChapter": 43
+    },
+    "2": {
+      "chapters": [
+        47
+      ],
+      "filler": false,
+      "firstChapter": 47,
+      "lastChapter": 47,
+      "nextChapter": 48
+    },
+    "3": {
+      "chapters": [
+        52
+      ],
+      "filler": false,
+      "firstChapter": 52,
+      "lastChapter": 52,
+      "nextChapter": 53
+    },
+    "4": {
+      "chapters": [
+        56
+      ],
+      "filler": false,
+      "firstChapter": 56,
+      "lastChapter": 56,
+      "nextChapter": 57
+    },
+    "5": {
+      "chapters": [
+        60
+      ],
+      "filler": false,
+      "firstChapter": 60,
+      "lastChapter": 60,
+      "nextChapter": 61
+    },
+    "6": {
+      "chapters": [
+        63
+      ],
+      "filler": false,
+      "firstChapter": 63,
+      "lastChapter": 63,
+      "nextChapter": 64
+    },
+    "7": {
+      "chapters": [
+        67
+      ],
+      "filler": false,
+      "firstChapter": 67,
+      "lastChapter": 67,
+      "nextChapter": 68
+    },
+    "8": {
+      "chapters": [
+        71
+      ],
+      "filler": false,
+      "firstChapter": 71,
+      "lastChapter": 71,
+      "nextChapter": 72
+    },
+    "9": {
+      "chapters": [
+        75
+      ],
+      "filler": false,
+      "firstChapter": 75,
+      "lastChapter": 75,
+      "nextChapter": 76
+    },
+    "10": {
+      "chapters": [
+        80
+      ],
+      "filler": false,
+      "firstChapter": 80,
+      "lastChapter": 80,
+      "nextChapter": 81
+    },
+    "11": {
+      "chapters": [
+        85
+      ],
+      "filler": false,
+      "firstChapter": 85,
+      "lastChapter": 85,
+      "nextChapter": 86
+    },
+    "12": {
+      "chapters": [
+        88
+      ],
+      "filler": false,
+      "firstChapter": 88,
+      "lastChapter": 88,
+      "nextChapter": 89
+    }
+  }
+}

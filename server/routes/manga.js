@@ -110,8 +110,13 @@ router.get('/adaptation', async (req, res) => {
       return res.status(400).json({ error: 'animeId and episode are required' })
     }
     const { result, notFound } = adaptation.getAdaptation(animeId, episode)
-    if (notFound === 'unknown-anime') return res.status(404).json({ error: 'Unknown animeId' })
-    if (notFound === 'unknown-episode') return res.status(404).json({ error: 'Episode not in adaptation map' })
+    if (notFound) {
+      console.log(`[manga] adaptation | animeId=${animeId} | episode=${episode} | ${notFound}`)
+      return res.status(404).json({ error: notFound === 'unknown-anime' ? 'Unknown animeId' : 'Episode not in adaptation map' })
+    }
+    console.log(
+      `[manga] adaptation | animeId=${result.animeId} | episode=${result.episode} | series=${result.series} | filler=${result.filler} | lastAdaptedChapter=${result.lastAdaptedChapter ?? '-'} | nextChapter=${result.nextChapter}`
+    )
     res.json(result)
   } catch (err) {
     console.error('[manga] adaptation error:', err.message)

@@ -18,6 +18,8 @@ const MAPS_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', '
 const SERIES = [
   { key: 'naruto', title: 'Naruto', anilistId: 20, file: 'naruto.json' },
   { key: 'naruto-shippuden', title: 'Naruto Shippuden', anilistId: 1735, file: 'naruto-shippuden.json' },
+  { key: 'wind-breaker-s1', title: 'Wind Breaker (Season 1)', anilistId: 163270, file: 'wind-breaker-s1.json' },
+  { key: 'wind-breaker-s2', title: 'Wind Breaker (Season 2)', anilistId: 178680, file: 'wind-breaker-s2.json' },
 ]
 
 const loaded = new Map()

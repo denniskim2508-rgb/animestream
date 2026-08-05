@@ -40,7 +40,7 @@ export default function VideoPlayer() {
   const [cdnHeaders, setCdnHeaders] = useState({})
   const [hasSub, setHasSub] = useState(true)
   const [hasDub, setHasDub] = useState(false)
-  const { user, addContinueWatching, updateContinueWatchingProgress, removeContinueWatching, addWatchMinutes } = useAuth()
+  const { user, addContinueWatching, updateContinueWatchingProgress, addWatchMinutes } = useAuth()
 
   const [showNextEpisode, setShowNextEpisode] = useState(false)
   const [nextEpLoading, setNextEpLoading] = useState(false)
@@ -168,10 +168,6 @@ export default function VideoPlayer() {
     const doSave = () => {
       if (!video.duration || video.duration <= 0 || !isFinite(video.duration)) return
       if (video.currentTime < 30) return
-      if (video.currentTime >= video.duration * 0.95) {
-        removeContinueWatching(animeId)
-        return
-      }
       updateContinueWatchingProgress(animeId, currentEp, video.currentTime, video.duration)
     }
 

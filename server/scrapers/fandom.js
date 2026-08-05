@@ -1,20 +1,16 @@
 // Fandom wiki episode→chapter scraper (dev-time tool + reusable module).
 //
-// Naruto's fandom wiki stores every episode's manga adaptation in a page
-// infobox, e.g.:
-//   {{Infobox/Naruto/Episode
-//   |episode=364
-//   |shippuden=Yes
-//   |boruto=No
-//   |chapters=613, 614, 615
-//   }}
-// A missing `chapters` field means the episode is anime-original (filler).
+// Series wikis store each episode's manga adaptation in a page infobox, but the
+// shape differs per wiki. Per-wiki configs (WIKIS) describe how to read them:
+//   naruto:     {{Infobox/Naruto/Episode |episode=364 |shippuden=Yes |chapters=613, 614, 615}}
+//               A missing `chapters` field means the episode is anime-original (filler).
+//   windbreaker:{{Infobox episode |season=1 |number=3 |manga chapter=[[Chapter 3 (Wind Breaker)|Chapter 3]]}}
 //
 // This module:
 //   1. Lists every page in a wiki category (Category:Episodes).
 //   2. Fetches wikitext in batches of 50 via the MediaWiki API.
-//   3. Extracts {episode, shippuden, boruto, chapters} per page.
-//   4. Builds the flat { series, episodes } map used by /api/manga/adaptation.
+//   3. Extracts { episode, chapters, series } per page using the wiki config.
+//   4. Builds the flat { series, episodes } maps used by /api/manga/adaptation.
 //
 // Run directly to regenerate the cached JSON maps:
 //   node server/scrapers/fandom.js
@@ -31,6 +27,44 @@ const BROWSER_UA =
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36'
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
+
+// Per-wiki scraper config. `seriesOf(fields)` maps the extracted infobox fields
+// to a series key (see `files`), or null to skip the page.
+const WIKIS = {
+  naruto: {
+    apiBase: 'https://naruto.fandom.com/api.php',
+    category: 'Category:Episodes',
+    infobox: 'Infobox/Naruto/Episode',
+    episodeField: 'episode',
+    chaptersField: 'chapters',
+    wikilinks: false,
+    files: {
+      naruto: { file: 'naruto.json', title: 'Naruto' },
+      'naruto-shippuden': { file: 'naruto-shippuden.json', title: 'Naruto Shippuden' },
+    },
+    seriesOf: (fields) => {
+      if (fields.boruto === 'Yes') return null
+      return fields.shippuden === 'Yes' ? 'naruto-shippuden' : 'naruto'
+    },
+  },
+  windbreaker: {
+    apiBase: 'https://wind-breaker.fandom.com/api.php',
+    category: 'Category:Episodes',
+    infobox: 'Infobox episode',
+    episodeField: 'number',
+    chaptersField: 'manga chapter',
+    wikilinks: true,
+    files: {
+      s1: { file: 'wind-breaker-s1.json', title: 'Wind Breaker (Season 1)' },
+      s2: { file: 'wind-breaker-s2.json', title: 'Wind Breaker (Season 2)' },
+    },
+    seriesOf: (fields) => {
+      if (fields.season === '1') return 's1'
+      if (fields.season === '2') return 's2'
+      return null
+    },
+  },
+}
 
 // Parse an infobox chapters value: "613, 614, 615", "512-513", "512–513",
 // "Ch. 245". Returns a sorted, deduped array of numbers.
@@ -50,6 +84,22 @@ export function parseChapters(raw) {
       const single = token.match(/\d+/)
       if (single) out.push(Number(single[0]))
     }
+  }
+  return [...new Set(out)].sort((a, b) => a - b)
+}
+
+// Parse a chapters value written as wikilink(s), e.g.
+//   [[Chapter 1 (Wind Breaker)|Chapter 1]] (pp. 26 – 35)
+// using the display text after the last `|` (or the whole link) and its first number.
+function parseWikilinkChapters(raw) {
+  const s = String(raw || '').trim()
+  if (!s) return []
+  const out = []
+  for (const m of s.matchAll(/\[\[([^\]]+)\]\]/g)) {
+    const link = m[1].split('|')
+    const display = link[link.length - 1].trim()
+    const num = display.match(/\d+/)
+    if (num) out.push(Number(num[0]))
   }
   return [...new Set(out)].sort((a, b) => a - b)
 }
@@ -80,22 +130,20 @@ function extractTemplateInner(wikitext, marker) {
   return null
 }
 
-// Extract the Naruto episode infobox from wikitext.
-export function extractEpisode(wikitext) {
-  const inner = extractTemplateInner(wikitext, '{{Infobox/Naruto/Episode')
+// Extract an episode infobox from wikitext using a wiki config. Values run to
+// end-of-line (they may contain `|`, e.g. a wikilink `[[X|Chapter 1]]`).
+export function extractEpisode(wikitext, config) {
+  const inner = extractTemplateInner(wikitext, `{{${config.infobox}`)
   if (inner == null) return null
   const fields = {}
-  for (const fm of inner.matchAll(/\|\s*([A-Za-z][A-Za-z0-9 ]*)\s*=\s*([^\n|]*)/g)) {
+  for (const fm of inner.matchAll(/\|\s*([A-Za-z][A-Za-z0-9 ]*)\s*=\s*([^\n]*)/g)) {
     fields[fm[1].trim().toLowerCase()] = fm[2].trim()
   }
-  const episode = Number(fields.episode)
+  const episode = Number(fields[config.episodeField])
   if (!episode) return null
-  return {
-    episode,
-    shippuden: fields.shippuden,
-    boruto: fields.boruto,
-    chapters: parseChapters(fields.chapters),
-  }
+  const raw = fields[config.chaptersField]
+  const chapters = config.wikilinks ? parseWikilinkChapters(raw) : parseChapters(raw)
+  return { episode, fields, chapters }
 }
 
 async function apiGet(url, label) {
@@ -138,31 +186,31 @@ export async function fetchWikitext(apiBase, titles) {
   return map
 }
 
-// Scrape a wiki category into { naruto, shippuden } episode maps.
-export async function scrapeFandom({ apiBase, category, onBatch }) {
-  const titles = await listCategoryMembers(apiBase, category)
-  const maps = { naruto: {}, shippuden: {} }
+// Scrape a wiki category into series episode maps, grouped by config.seriesOf.
+export async function scrapeWiki(config, onBatch) {
+  const titles = await listCategoryMembers(config.apiBase, config.category)
+  const maps = {}
   const skipped = []
 
   for (let i = 0; i < titles.length; i += 50) {
     const batch = titles.slice(i, i + 50)
-    const contents = await fetchWikitext(apiBase, batch)
+    const contents = await fetchWikitext(config.apiBase, batch)
     for (const [title, wikitext] of contents) {
-      const ep = extractEpisode(wikitext)
+      const ep = extractEpisode(wikitext, config)
       if (!ep) {
         skipped.push(`${title} (no episode number)`)
         continue
       }
-      let series = null
-      if (ep.boruto === 'Yes') {
-        skipped.push(`${title} (boruto)`)
+      const seriesKey = config.seriesOf(ep.fields)
+      if (!seriesKey) {
+        skipped.push(`${title} (no matching series)`)
         continue
       }
-      series = ep.shippuden === 'Yes' ? 'shippuden' : 'naruto'
+      if (!maps[seriesKey]) maps[seriesKey] = {}
       const key = String(ep.episode)
-      const existing = maps[series][key]
+      const existing = maps[seriesKey][key]
       if (existing && existing.chapters.length) continue
-      maps[series][key] = {
+      maps[seriesKey][key] = {
         chapters: ep.chapters,
         filler: ep.chapters.length === 0,
         firstChapter: ep.chapters.length ? ep.chapters[0] : null,
@@ -175,7 +223,7 @@ export async function scrapeFandom({ apiBase, category, onBatch }) {
   }
 
   // Number the follow-up chapter for fillers and canon episodes.
-  for (const map of [maps.naruto, maps.shippuden]) {
+  for (const map of Object.values(maps)) {
     let pending = 1
     for (const key of Object.keys(map).map(Number).sort((a, b) => a - b)) {
       const e = map[key]
@@ -190,6 +238,12 @@ export async function scrapeFandom({ apiBase, category, onBatch }) {
   return { maps, skipped }
 }
 
+// Back-compat wrapper for the original Naruto-only entry point.
+export async function scrapeFandom({ apiBase, category, onBatch }) {
+  const { maps, skipped } = await scrapeWiki({ ...WIKIS.naruto, apiBase, category }, onBatch)
+  return { maps: { naruto: maps.naruto || {}, 'naruto-shippuden': maps['naruto-shippuden'] || {} }, skipped }
+}
+
 function writeMap(file, series, title, episodes) {
   const out = { series, title, episodes }
   const target = path.join(MAPS_DIR, file)
@@ -198,33 +252,30 @@ function writeMap(file, series, title, episodes) {
   return target
 }
 
-export async function runNaruto() {
-  const apiBase = 'https://naruto.fandom.com/api.php'
-  const { maps, skipped } = await scrapeFandom({
-    apiBase,
-    category: 'Category:Episodes',
-    onBatch: (done, total) => process.stdout.write(`\rfetched ${done}/${total}...`),
-  })
+async function runWiki(name) {
+  const config = WIKIS[name]
+  const { maps, skipped } = await scrapeWiki(config, (done, total) =>
+    process.stdout.write(`\r[${name}] fetched ${done}/${total}...`)
+  )
 
-  const summary = (name, map) => {
-    const eps = Object.keys(map).length
-    const fillers = Object.values(map).filter((e) => e.filler).length
-    return `${name}: ${eps} episodes (${fillers} filler)`
+  console.log(`\n[${name}]`)
+  for (const key of Object.keys(maps)) {
+    const { file, title } = config.files[key]
+    const eps = Object.keys(maps[key]).length
+    const fillers = Object.values(maps[key]).filter((e) => e.filler).length
+    const target = writeMap(file, key, title, maps[key])
+    console.log(`  ${title}: ${eps} episodes (${fillers} filler) -> ${file}`)
+    console.log(`  wrote ${target}`)
   }
-  const narutoFile = writeMap('naruto.json', 'naruto', 'Naruto', maps.naruto)
-  const shippudenFile = writeMap('naruto-shippuden.json', 'naruto-shippuden', 'Naruto Shippuden', maps.shippuden)
-
-  console.log('\n\n' + summary('Naruto', maps.naruto))
-  console.log(summary('Naruto Shippuden', maps.shippuden))
-  console.log('skipped:', skipped.length ? skipped.join('; ') : 'none')
-  console.log('wrote', narutoFile)
-  console.log('wrote', shippudenFile)
+  console.log(`  skipped: ${skipped.length ? skipped.join('; ') : 'none'}`)
 }
 
 // CLI: `node server/scrapers/fandom.js`
 const isMain = process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)
 if (isMain) {
-  runNaruto().catch((err) => {
-    console.error('scrape failed:', err)
-  })
+  runWiki('naruto')
+    .then(() => runWiki('windbreaker'))
+    .catch((err) => {
+      console.error('scrape failed:', err)
+    })
 }

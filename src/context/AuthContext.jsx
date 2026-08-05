@@ -225,6 +225,7 @@ export function AuthProvider({ children }) {
     const list = u ? (u.continueWatching || []) : getLocalContinueWatching()
     const prev = list.find((e) => e.animeId === String(animeId))
     const now = Date.now()
+    const sameEpisode = prev?.episode === Number(episode)
     const entry = {
       animeId: String(animeId),
       episode: Number(episode),
@@ -232,9 +233,11 @@ export function AuthProvider({ children }) {
       coverImage: coverImage || prev?.coverImage || '',
       totalEpisodes: Number(totalEpisodes) || prev?.totalEpisodes || 0,
       audioMode: audioMode || prev?.audioMode || 'sub',
-      currentTime: prev?.currentTime || 0,
+      currentTime: sameEpisode && !prev?.completed ? prev?.currentTime || 0 : 0,
       duration: prev?.duration || 0,
-      progressPercent: prev?.progressPercent || 0,
+      progressPercent: sameEpisode && !prev?.completed ? prev?.progressPercent || 0 : 0,
+      completed: false,
+      completedAt: null,
       updatedAt: prev?.updatedAt || now,
     }
     if (!u) {
@@ -253,27 +256,31 @@ export function AuthProvider({ children }) {
   const updateContinueWatchingProgress = useCallback(async (animeId, episode, currentTime, duration) => {
     const u = userRef.current
     const progressPercent = duration > 0 ? Math.min(Math.round((currentTime / duration) * 100), 100) : 0
-    if (!u) {
-      const list = getLocalContinueWatching().map((e) => {
-        if (e.animeId === String(animeId)) {
-          return { ...e, episode: Number(episode), currentTime, duration, progressPercent, updatedAt: Date.now() }
-        }
-        return e
-      })
-      saveLocalContinueWatching(list.filter((e) => e.duration <= 0 || e.currentTime < e.duration * 0.95))
-      return
-    }
-    const list = (u.continueWatching || []).map((e) => {
+    const mapEntry = (e) => {
       if (e.animeId === String(animeId)) {
-        return { ...e, episode: Number(episode), currentTime, duration, progressPercent, updatedAt: Date.now() }
+        const finished = duration > 0 && currentTime / duration >= 0.95
+        return {
+          ...e,
+          episode: Number(episode),
+          currentTime,
+          duration,
+          progressPercent,
+          completed: finished,
+          completedAt: finished ? Date.now() : null,
+          updatedAt: Date.now(),
+        }
       }
       return e
-    })
-    const filtered = list
-      .filter((e) => e.duration <= 0 || e.currentTime < e.duration * 0.95)
+    }
+    if (!u) {
+      saveLocalContinueWatching(getLocalContinueWatching().map(mapEntry))
+      return
+    }
+    const updated = (u.continueWatching || [])
+      .map(mapEntry)
       .sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0))
-    await updateDoc(doc(db, 'users', u.uid), { continueWatching: filtered })
-    setUser((prev) => ({ ...prev, continueWatching: filtered }))
+    await updateDoc(doc(db, 'users', u.uid), { continueWatching: updated })
+    setUser((prev) => ({ ...prev, continueWatching: updated }))
   }, [])
 
   const removeContinueWatching = useCallback(async (animeId) => {

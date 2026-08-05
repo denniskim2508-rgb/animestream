@@ -1,0 +1,123 @@
+{
+  "series": "s1",
+  "title": "Wind Breaker (Season 1)",
+  "episodes": {
+    "1": {
+      "chapters": [
+        1
+      ],
+      "filler": false,
+      "firstChapter": 1,
+      "lastChapter": 1,
+      "nextChapter": 2
+    },
+    "2": {
+      "chapters": [
+        2
+      ],
+      "filler": false,
+      "firstChapter": 2,
+      "lastChapter": 2,
+      "nextChapter": 3
+    },
+    "3": {
+      "chapters": [
+        3
+      ],
+      "filler": false,
+      "firstChapter": 3,
+      "lastChapter": 3,
+      "nextChapter": 4
+    },
+    "4": {
+      "chapters": [
+        7
+      ],
+      "filler": false,
+      "firstChapter": 7,
+      "lastChapter": 7,
+      "nextChapter": 8
+    },
+    "5": {
+      "chapters": [
+        10
+      ],
+      "filler": false,
+      "firstChapter": 10,
+      "lastChapter": 10,
+      "nextChapter": 11
+    },
+    "6": {
+      "chapters": [
+        13
+      ],
+      "filler": false,
+      "firstChapter": 13,
+      "lastChapter": 13,
+      "nextChapter": 14
+    },
+    "7": {
+      "chapters": [
+        16
+      ],
+      "filler": false,
+      "firstChapter": 16,
+      "lastChapter": 16,
+      "nextChapter": 17
+    },
+    "8": {
+      "chapters": [
+        20
+      ],
+      "filler": false,
+      "firstChapter": 20,
+      "lastChapter": 20,
+      "nextChapter": 21
+    },
+    "9": {
+      "chapters": [
+        24
+      ],
+      "filler": false,
+      "firstChapter": 24,
+      "lastChapter": 24,
+      "nextChapter": 25
+    },
+    "10": {
+      "chapters": [
+        27
+      ],
+      "filler": false,
+      "firstChapter": 27,
+      "lastChapter": 27,
+      "nextChapter": 28
+    },
+    "11": {
+      "chapters": [
+        31
+      ],
+      "filler": false,
+      "firstChapter": 31,
+      "lastChapter": 31,
+      "nextChapter": 32
+    },
+    "12": {
+      "chapters": [
+        34
+      ],
+      "filler": false,
+      "firstChapter": 34,
+      "lastChapter": 34,
+      "nextChapter": 35
+    },
+    "13": {
+      "chapters": [
+        38
+      ],
+      "filler": false,
+      "firstChapter": 38,
+      "lastChapter": 38,
+      "nextChapter": 39
+    }
+  }
+}
