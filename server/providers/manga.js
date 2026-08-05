@@ -266,7 +266,7 @@ async function findChapterSource(title, excludeProvider) {
     try {
       const res = await PROVIDERS[name].search(title, 20, 0)
       for (const item of res.data) {
-        const score = Math.max(titleScore(title, item.title), fuzzyTitleScore(title, item.title))
+        const score = scoreCandidate(title, item)
         if (score > best.score) {
           best.score = score
           best.src = { name, id: item.id }
@@ -286,6 +286,19 @@ function fuzzyTitleScore(query, title) {
   if (!a.length || !b.length) return 0
   const common = a.filter((w) => b.includes(w)).length
   return (common * 2) / (a.length + b.length)
+}
+
+// Score a provider result against a query title. The display title is matched
+// leniently (fuzzy), but alternate titles only count on a strict exact match —
+// otherwise localized spin-offs/sequels (e.g. "…: Senjou wo Kakeru Kaifuku
+// Youin") would alias to their parent series and show the wrong chapters.
+function scoreCandidate(query, item) {
+  let best = Math.max(titleScore(query, item.title), fuzzyTitleScore(query, item.title))
+  for (const alt of item.altTitles || []) {
+    const s = titleScore(query, alt)
+    if (s > best) best = s
+  }
+  return best
 }
 
 // Recover the owning manga's opaque id from a chapter id where possible.
@@ -379,7 +392,7 @@ async function fallbackPages(chapterId, provider, mangaId, chapterNum) {
         let best = null
         let bestScore = 0
         for (const item of res.data) {
-          const score = Math.max(titleScore(t, item.title), fuzzyTitleScore(t, item.title))
+          const score = scoreCandidate(t, item)
           if (score > bestScore) {
             bestScore = score
             best = item

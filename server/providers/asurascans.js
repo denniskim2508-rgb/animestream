@@ -112,16 +112,20 @@ export async function detail(ref) {
 
 export async function chapters(ref, _lang = 'en', limit = 100, offset = 0) {
   const j = await api(`/series/${ref}/chapters`)
-  const all = (j.data || []).map((c) => ({
-    id: `${PROVIDER}:${ref}:${c.slug}`,
-    chapter: c.number,
-    title: c.title || '',
-    volume: null,
-    lang: 'en',
-    pages: c.page_count || 0,
-    publishedAt: c.published_at || null,
-    group: null,
-  }))
+  const all = (j.data || [])
+    // Early-access/premium chapters are locked on the site and the API serves
+    // them with no page URLs — drop them so the reader never opens a dead page.
+    .filter((c) => !c.is_premium)
+    .map((c) => ({
+      id: `${PROVIDER}:${ref}:${c.slug}`,
+      chapter: c.number,
+      title: c.title || '',
+      volume: null,
+      lang: 'en',
+      pages: c.page_count || 0,
+      publishedAt: c.published_at || null,
+      group: null,
+    }))
   const end = limit >= 500 ? all.length : Math.min(offset + limit, all.length)
   return { data: all.slice(offset, end), total: all.length }
 }
