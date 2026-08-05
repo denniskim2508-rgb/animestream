@@ -1,5 +1,6 @@
 import { Router } from 'express'
 import * as manga from '../services/mangaService.js'
+import * as adaptation from '../services/adaptationService.js'
 
 const router = Router()
 
@@ -97,6 +98,24 @@ router.get('/:id/chapters', async (req, res) => {
   } catch (err) {
     console.error('[manga] chapters error:', err.message)
     res.status(502).json({ error: 'Failed to fetch chapters' })
+  }
+})
+
+// Must be registered before /:id so "adaptation" isn't treated as a manga id.
+// Maps a watched anime episode to the next chapter to read in the manga.
+router.get('/adaptation', async (req, res) => {
+  try {
+    const { animeId, episode } = req.query
+    if (animeId == null || episode == null) {
+      return res.status(400).json({ error: 'animeId and episode are required' })
+    }
+    const { result, notFound } = adaptation.getAdaptation(animeId, episode)
+    if (notFound === 'unknown-anime') return res.status(404).json({ error: 'Unknown animeId' })
+    if (notFound === 'unknown-episode') return res.status(404).json({ error: 'Episode not in adaptation map' })
+    res.json(result)
+  } catch (err) {
+    console.error('[manga] adaptation error:', err.message)
+    res.status(502).json({ error: 'Failed to resolve adaptation' })
   }
 })
 

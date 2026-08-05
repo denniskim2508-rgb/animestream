@@ -64,7 +64,8 @@ export async function findAnimeForManga(mangaTitle) {
 
     const mangaWithRels = await fetchAnilistManga(match.id)
     const rels = mangaWithRels?.relations?.edges || []
-    const animeRel = rels.find((r) => r.node.format === 'TV' || r.node.format === 'MOVIE')
+    const animeRels = rels.filter((r) => r.node.format === 'TV' || r.node.format === 'MOVIE')
+    const animeRel = animeRels[0]
     if (!animeRel) return null
 
     const node = animeRel.node
@@ -76,6 +77,11 @@ export async function findAnimeForManga(mangaTitle) {
       status: node.status,
       rating: node.averageScore ? node.averageScore / 10 : null,
       studio: node.studios?.nodes?.[0]?.name || '',
+      relatedAnime: animeRels.map((r) => ({
+        anilistId: r.node.id,
+        title: r.node.title.english || r.node.title.romaji,
+        episodes: r.node.episodes,
+      })),
     }
   } catch {
     return null

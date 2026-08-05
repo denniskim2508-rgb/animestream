@@ -1,7 +1,7 @@
 import { useParams, Link } from 'react-router-dom'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { BookOpen, Clock, Calendar, User, Pen, Star, Eye, ChevronLeft, Play, Loader2, Tv, Film, ChevronRight } from 'lucide-react'
-import { getMangaDetails, getMangaChapters } from '../api/manga'
+import { getMangaDetails, getMangaChapters, getAdaptation } from '../api/manga'
 import { SkeletonPage } from '../components/ui/Skeleton'
 import { findAnimeForManga } from '../api/crosslink'
 import { useAuth } from '../context/AuthContext'
@@ -18,6 +18,9 @@ export default function MangaDetail() {
   const [chLoading, setChLoading] = useState(false)
   const [linkedAnime, setLinkedAnime] = useState(null)
   const [animeLoading, setAnimeLoading] = useState(false)
+  const [adaptation, setAdaptation] = useState(null)
+  const [continueChapterId, setContinueChapterId] = useState(null)
+  const [adaptationLoading, setAdaptationLoading] = useState(false)
   const { user } = useAuth()
   const perPage = 50
 
@@ -42,6 +45,10 @@ export default function MangaDetail() {
           setLoading(false)
         }
       })
+
+    setAdaptation(null)
+    setContinueChapterId(null)
+    setAdaptationLoading(false)
 
     return () => { cancelled = true }
   }, [id])
@@ -72,6 +79,60 @@ export default function MangaDetail() {
       .finally(() => { if (!cancelled) setAnimeLoading(false) })
     return () => { cancelled = true }
   }, [manga?.title])
+
+  const findChapterByNumber = useCallback(async (mangaId, chapterNum) => {
+    const limit = 100
+    let offset = 0
+    while (true) {
+      const res = await getMangaChapters(mangaId, 'en', limit, offset)
+      const data = res.data || []
+      if (!data.length) return null
+      const hit = data.find((ch) => Number(ch.chapter) === chapterNum)
+      if (hit) return hit
+      if (data.length < limit) return null
+      offset += limit
+      if (res.total > 0 && offset >= res.total) return null
+    }
+  }, [])
+
+  // Continue Reading: if the user has an anime adaptation in their watch
+  // history, show where they should pick up in the manga.
+  useEffect(() => {
+    if (!manga?.title || !linkedAnime || animeLoading) return
+    if (!user) {
+      setAdaptation(null)
+      setContinueChapterId(null)
+      return
+    }
+    const candidates = linkedAnime.relatedAnime?.length
+      ? linkedAnime.relatedAnime
+      : [linkedAnime]
+    const watched = (user.continueWatching || [])
+      .filter((e) => candidates.some((c) => String(c.anilistId) === String(e.animeId)))
+      .sort((a, b) => Number(b.episode) - Number(a.episode))[0]
+    if (!watched) {
+      setAdaptation(null)
+      setContinueChapterId(null)
+      return
+    }
+
+    let cancelled = false
+    setAdaptationLoading(true)
+    getAdaptation(watched.animeId, watched.episode)
+      .then((res) => {
+        if (cancelled || !res?.nextChapter) {
+          if (!cancelled) setAdaptation(null)
+          return
+        }
+        setAdaptation({ ...res, animeTitle: watched.title || res.animeTitle, watchedEpisode: watched.episode })
+        return findChapterByNumber(id, res.nextChapter).then((ch) => {
+          if (!cancelled) setContinueChapterId(ch?.id || null)
+        })
+      })
+      .catch(() => { if (!cancelled) setAdaptation(null) })
+      .finally(() => { if (!cancelled) setAdaptationLoading(false) })
+    return () => { cancelled = true }
+  }, [manga?.title, id, linkedAnime, animeLoading, user, findChapterByNumber])
 
   const loadMore = () => setChPage((p) => p + 1)
 
@@ -171,6 +232,36 @@ export default function MangaDetail() {
             )}
           </div>
         </div>
+
+        {!adaptationLoading && adaptation && continueChapterId && (
+          <section className="mt-8 animate-[fadeSlideUp_300ms_ease-out]">
+            <Link
+              to={`/manga/${id}/read/${encodeURIComponent(continueChapterId)}`}
+              className="block group"
+            >
+              <div className="bg-[#161B2E] rounded-2xl border border-primary/30 shadow-xl shadow-black/30 p-5 md:p-6 hover:border-primary/60 transition-all duration-300 flex flex-col md:flex-row md:items-center gap-4">
+                <div className="w-12 h-12 rounded-xl bg-primary/20 flex items-center justify-center shrink-0">
+                  <BookOpen className="w-6 h-6 text-primary-light" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[11px] uppercase tracking-wider text-primary-light font-semibold mb-1">Continue Reading</p>
+                  <p className="text-sm md:text-base text-white font-semibold truncate">
+                    You watched {adaptation.animeTitle} Episode {adaptation.watchedEpisode}
+                  </p>
+                  <p className="text-sm text-gray-400 mt-0.5">
+                    {adaptation.filler
+                      ? `That episode is anime-original — the manga story resumes at Chapter ${adaptation.nextChapter}.`
+                      : `The anime stopped at Chapter ${adaptation.lastAdaptedChapter} — pick up where it left off.`}
+                  </p>
+                </div>
+                <span className="inline-flex items-center gap-2 px-5 py-2.5 bg-primary hover:bg-primary-dark text-white text-sm font-semibold rounded-xl transition-all active:scale-95 shadow-lg shadow-primary/25 shrink-0">
+                  Continue from Chapter {adaptation.nextChapter}
+                  <ChevronRight className="w-4 h-4" />
+                </span>
+              </div>
+            </Link>
+          </section>
+        )}
 
         <div className="mt-8">
           <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2">

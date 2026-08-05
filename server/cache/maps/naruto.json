@@ -1,0 +1,1969 @@
+{
+  "series": "naruto",
+  "title": "Naruto",
+  "episodes": {
+    "1": {
+      "chapters": [
+        1
+      ],
+      "filler": false,
+      "firstChapter": 1,
+      "lastChapter": 1,
+      "nextChapter": 2
+    },
+    "2": {
+      "chapters": [
+        2
+      ],
+      "filler": false,
+      "firstChapter": 2,
+      "lastChapter": 2,
+      "nextChapter": 3
+    },
+    "3": {
+      "chapters": [
+        3
+      ],
+      "filler": false,
+      "firstChapter": 3,
+      "lastChapter": 3,
+      "nextChapter": 4
+    },
+    "4": {
+      "chapters": [
+        4,
+        5,
+        6
+      ],
+      "filler": false,
+      "firstChapter": 4,
+      "lastChapter": 6,
+      "nextChapter": 7
+    },
+    "5": {
+      "chapters": [
+        6,
+        7,
+        8
+      ],
+      "filler": false,
+      "firstChapter": 6,
+      "lastChapter": 8,
+      "nextChapter": 9
+    },
+    "6": {
+      "chapters": [
+        9,
+        10,
+        11
+      ],
+      "filler": false,
+      "firstChapter": 9,
+      "lastChapter": 11,
+      "nextChapter": 12
+    },
+    "7": {
+      "chapters": [
+        11,
+        12
+      ],
+      "filler": false,
+      "firstChapter": 11,
+      "lastChapter": 12,
+      "nextChapter": 13
+    },
+    "8": {
+      "chapters": [
+        13,
+        14
+      ],
+      "filler": false,
+      "firstChapter": 13,
+      "lastChapter": 14,
+      "nextChapter": 15
+    },
+    "9": {
+      "chapters": [
+        15,
+        16
+      ],
+      "filler": false,
+      "firstChapter": 15,
+      "lastChapter": 16,
+      "nextChapter": 17
+    },
+    "10": {
+      "chapters": [
+        17,
+        18
+      ],
+      "filler": false,
+      "firstChapter": 17,
+      "lastChapter": 18,
+      "nextChapter": 19
+    },
+    "11": {
+      "chapters": [
+        19,
+        20
+      ],
+      "filler": false,
+      "firstChapter": 19,
+      "lastChapter": 20,
+      "nextChapter": 21
+    },
+    "12": {
+      "chapters": [
+        21,
+        22
+      ],
+      "filler": false,
+      "firstChapter": 21,
+      "lastChapter": 22,
+      "nextChapter": 23
+    },
+    "13": {
+      "chapters": [
+        23,
+        24
+      ],
+      "filler": false,
+      "firstChapter": 23,
+      "lastChapter": 24,
+      "nextChapter": 25
+    },
+    "14": {
+      "chapters": [
+        25
+      ],
+      "filler": false,
+      "firstChapter": 25,
+      "lastChapter": 25,
+      "nextChapter": 26
+    },
+    "15": {
+      "chapters": [
+        25,
+        26
+      ],
+      "filler": false,
+      "firstChapter": 25,
+      "lastChapter": 26,
+      "nextChapter": 27
+    },
+    "16": {
+      "chapters": [
+        26,
+        27
+      ],
+      "filler": false,
+      "firstChapter": 26,
+      "lastChapter": 27,
+      "nextChapter": 28
+    },
+    "17": {
+      "chapters": [
+        28,
+        29,
+        30
+      ],
+      "filler": false,
+      "firstChapter": 28,
+      "lastChapter": 30,
+      "nextChapter": 31
+    },
+    "18": {
+      "chapters": [
+        31,
+        32
+      ],
+      "filler": false,
+      "firstChapter": 31,
+      "lastChapter": 32,
+      "nextChapter": 33
+    },
+    "19": {
+      "chapters": [
+        701,
+        702
+      ],
+      "filler": false,
+      "firstChapter": 701,
+      "lastChapter": 702,
+      "nextChapter": 703
+    },
+    "20": {
+      "chapters": [
+        34
+      ],
+      "filler": false,
+      "firstChapter": 34,
+      "lastChapter": 34,
+      "nextChapter": 35
+    },
+    "21": {
+      "chapters": [
+        35,
+        36
+      ],
+      "filler": false,
+      "firstChapter": 35,
+      "lastChapter": 36,
+      "nextChapter": 37
+    },
+    "22": {
+      "chapters": [
+        37,
+        38
+      ],
+      "filler": false,
+      "firstChapter": 37,
+      "lastChapter": 38,
+      "nextChapter": 39
+    },
+    "23": {
+      "chapters": [
+        709,
+        710
+      ],
+      "filler": false,
+      "firstChapter": 709,
+      "lastChapter": 710,
+      "nextChapter": 711
+    },
+    "24": {
+      "chapters": [
+        700,
+        705
+      ],
+      "filler": false,
+      "firstChapter": 700,
+      "lastChapter": 705,
+      "nextChapter": 706
+    },
+    "25": {
+      "chapters": [
+        43,
+        44
+      ],
+      "filler": false,
+      "firstChapter": 43,
+      "lastChapter": 44,
+      "nextChapter": 45
+    },
+    "26": {
+      "chapters": [],
+      "filler": true,
+      "firstChapter": null,
+      "lastChapter": null,
+      "nextChapter": 45
+    },
+    "27": {
+      "chapters": [
+        45,
+        46
+      ],
+      "filler": false,
+      "firstChapter": 45,
+      "lastChapter": 46,
+      "nextChapter": 47
+    },
+    "28": {
+      "chapters": [
+        46,
+        47
+      ],
+      "filler": false,
+      "firstChapter": 46,
+      "lastChapter": 47,
+      "nextChapter": 48
+    },
+    "29": {
+      "chapters": [
+        48,
+        49
+      ],
+      "filler": false,
+      "firstChapter": 48,
+      "lastChapter": 49,
+      "nextChapter": 50
+    },
+    "30": {
+      "chapters": [
+        49,
+        50
+      ],
+      "filler": false,
+      "firstChapter": 49,
+      "lastChapter": 50,
+      "nextChapter": 51
+    },
+    "31": {
+      "chapters": [
+        50,
+        51,
+        52
+      ],
+      "filler": false,
+      "firstChapter": 50,
+      "lastChapter": 52,
+      "nextChapter": 53
+    },
+    "32": {
+      "chapters": [
+        53,
+        54
+      ],
+      "filler": false,
+      "firstChapter": 53,
+      "lastChapter": 54,
+      "nextChapter": 55
+    },
+    "33": {
+      "chapters": [
+        55,
+        56
+      ],
+      "filler": false,
+      "firstChapter": 55,
+      "lastChapter": 56,
+      "nextChapter": 57
+    },
+    "34": {
+      "chapters": [
+        57,
+        58,
+        59
+      ],
+      "filler": false,
+      "firstChapter": 57,
+      "lastChapter": 59,
+      "nextChapter": 60
+    },
+    "35": {
+      "chapters": [
+        60,
+        61
+      ],
+      "filler": false,
+      "firstChapter": 60,
+      "lastChapter": 61,
+      "nextChapter": 62
+    },
+    "36": {
+      "chapters": [
+        62,
+        63
+      ],
+      "filler": false,
+      "firstChapter": 62,
+      "lastChapter": 63,
+      "nextChapter": 64
+    },
+    "37": {
+      "chapters": [
+        63,
+        64,
+        65
+      ],
+      "filler": false,
+      "firstChapter": 63,
+      "lastChapter": 65,
+      "nextChapter": 66
+    },
+    "38": {
+      "chapters": [
+        65,
+        66,
+        67
+      ],
+      "filler": false,
+      "firstChapter": 65,
+      "lastChapter": 67,
+      "nextChapter": 68
+    },
+    "39": {
+      "chapters": [
+        67,
+        68,
+        69
+      ],
+      "filler": false,
+      "firstChapter": 67,
+      "lastChapter": 69,
+      "nextChapter": 70
+    },
+    "40": {
+      "chapters": [
+        69,
+        70
+      ],
+      "filler": false,
+      "firstChapter": 69,
+      "lastChapter": 70,
+      "nextChapter": 71
+    },
+    "41": {
+      "chapters": [
+        70,
+        71
+      ],
+      "filler": false,
+      "firstChapter": 70,
+      "lastChapter": 71,
+      "nextChapter": 72
+    },
+    "42": {
+      "chapters": [
+        72,
+        73
+      ],
+      "filler": false,
+      "firstChapter": 72,
+      "lastChapter": 73,
+      "nextChapter": 74
+    },
+    "43": {
+      "chapters": [
+        73,
+        74
+      ],
+      "filler": false,
+      "firstChapter": 73,
+      "lastChapter": 74,
+      "nextChapter": 75
+    },
+    "44": {
+      "chapters": [
+        75,
+        76
+      ],
+      "filler": false,
+      "firstChapter": 75,
+      "lastChapter": 76,
+      "nextChapter": 77
+    },
+    "45": {
+      "chapters": [
+        76,
+        77
+      ],
+      "filler": false,
+      "firstChapter": 76,
+      "lastChapter": 77,
+      "nextChapter": 78
+    },
+    "46": {
+      "chapters": [
+        78,
+        79
+      ],
+      "filler": false,
+      "firstChapter": 78,
+      "lastChapter": 79,
+      "nextChapter": 80
+    },
+    "47": {
+      "chapters": [
+        79,
+        80,
+        81
+      ],
+      "filler": false,
+      "firstChapter": 79,
+      "lastChapter": 81,
+      "nextChapter": 82
+    },
+    "48": {
+      "chapters": [
+        81,
+        82,
+        83
+      ],
+      "filler": false,
+      "firstChapter": 81,
+      "lastChapter": 83,
+      "nextChapter": 84
+    },
+    "49": {
+      "chapters": [
+        83,
+        84,
+        85
+      ],
+      "filler": false,
+      "firstChapter": 83,
+      "lastChapter": 85,
+      "nextChapter": 86
+    },
+    "50": {
+      "chapters": [
+        85,
+        86,
+        87
+      ],
+      "filler": false,
+      "firstChapter": 85,
+      "lastChapter": 87,
+      "nextChapter": 88
+    },
+    "51": {
+      "chapters": [
+        87,
+        88,
+        89
+      ],
+      "filler": false,
+      "firstChapter": 87,
+      "lastChapter": 89,
+      "nextChapter": 90
+    },
+    "52": {
+      "chapters": [
+        89,
+        90
+      ],
+      "filler": false,
+      "firstChapter": 89,
+      "lastChapter": 90,
+      "nextChapter": 91
+    },
+    "53": {
+      "chapters": [
+        91,
+        92
+      ],
+      "filler": false,
+      "firstChapter": 91,
+      "lastChapter": 92,
+      "nextChapter": 93
+    },
+    "54": {
+      "chapters": [
+        91,
+        92
+      ],
+      "filler": false,
+      "firstChapter": 91,
+      "lastChapter": 92,
+      "nextChapter": 93
+    },
+    "55": {
+      "chapters": [
+        92,
+        93
+      ],
+      "filler": false,
+      "firstChapter": 92,
+      "lastChapter": 93,
+      "nextChapter": 94
+    },
+    "56": {
+      "chapters": [
+        94,
+        95
+      ],
+      "filler": false,
+      "firstChapter": 94,
+      "lastChapter": 95,
+      "nextChapter": 96
+    },
+    "57": {
+      "chapters": [
+        95,
+        96
+      ],
+      "filler": false,
+      "firstChapter": 95,
+      "lastChapter": 96,
+      "nextChapter": 97
+    },
+    "58": {
+      "chapters": [
+        96,
+        97
+      ],
+      "filler": false,
+      "firstChapter": 96,
+      "lastChapter": 97,
+      "nextChapter": 98
+    },
+    "59": {
+      "chapters": [
+        98
+      ],
+      "filler": false,
+      "firstChapter": 98,
+      "lastChapter": 98,
+      "nextChapter": 99
+    },
+    "60": {
+      "chapters": [
+        99,
+        100
+      ],
+      "filler": false,
+      "firstChapter": 99,
+      "lastChapter": 100,
+      "nextChapter": 101
+    },
+    "61": {
+      "chapters": [
+        100,
+        101,
+        102
+      ],
+      "filler": false,
+      "firstChapter": 100,
+      "lastChapter": 102,
+      "nextChapter": 103
+    },
+    "62": {
+      "chapters": [
+        103,
+        104,
+        105
+      ],
+      "filler": false,
+      "firstChapter": 103,
+      "lastChapter": 105,
+      "nextChapter": 106
+    },
+    "63": {
+      "chapters": [
+        105,
+        106
+      ],
+      "filler": false,
+      "firstChapter": 105,
+      "lastChapter": 106,
+      "nextChapter": 107
+    },
+    "64": {
+      "chapters": [
+        106,
+        107,
+        108
+      ],
+      "filler": false,
+      "firstChapter": 106,
+      "lastChapter": 108,
+      "nextChapter": 109
+    },
+    "65": {
+      "chapters": [
+        109,
+        110
+      ],
+      "filler": false,
+      "firstChapter": 109,
+      "lastChapter": 110,
+      "nextChapter": 111
+    },
+    "66": {
+      "chapters": [
+        111,
+        112
+      ],
+      "filler": false,
+      "firstChapter": 111,
+      "lastChapter": 112,
+      "nextChapter": 113
+    },
+    "67": {
+      "chapters": [
+        112,
+        113,
+        114
+      ],
+      "filler": false,
+      "firstChapter": 112,
+      "lastChapter": 114,
+      "nextChapter": 115
+    },
+    "68": {
+      "chapters": [
+        115,
+        116
+      ],
+      "filler": false,
+      "firstChapter": 115,
+      "lastChapter": 116,
+      "nextChapter": 117
+    },
+    "69": {
+      "chapters": [
+        117,
+        118
+      ],
+      "filler": false,
+      "firstChapter": 117,
+      "lastChapter": 118,
+      "nextChapter": 119
+    },
+    "70": {
+      "chapters": [
+        118,
+        119
+      ],
+      "filler": false,
+      "firstChapter": 118,
+      "lastChapter": 119,
+      "nextChapter": 120
+    },
+    "71": {
+      "chapters": [
+        120,
+        121
+      ],
+      "filler": false,
+      "firstChapter": 120,
+      "lastChapter": 121,
+      "nextChapter": 122
+    },
+    "72": {
+      "chapters": [
+        121,
+        122
+      ],
+      "filler": false,
+      "firstChapter": 121,
+      "lastChapter": 122,
+      "nextChapter": 123
+    },
+    "73": {
+      "chapters": [
+        123,
+        124
+      ],
+      "filler": false,
+      "firstChapter": 123,
+      "lastChapter": 124,
+      "nextChapter": 125
+    },
+    "74": {
+      "chapters": [
+        125,
+        126
+      ],
+      "filler": false,
+      "firstChapter": 125,
+      "lastChapter": 126,
+      "nextChapter": 127
+    },
+    "75": {
+      "chapters": [
+        127,
+        128
+      ],
+      "filler": false,
+      "firstChapter": 127,
+      "lastChapter": 128,
+      "nextChapter": 129
+    },
+    "76": {
+      "chapters": [
+        129,
+        130
+      ],
+      "filler": false,
+      "firstChapter": 129,
+      "lastChapter": 130,
+      "nextChapter": 131
+    },
+    "77": {
+      "chapters": [
+        131,
+        132
+      ],
+      "filler": false,
+      "firstChapter": 131,
+      "lastChapter": 132,
+      "nextChapter": 133
+    },
+    "78": {
+      "chapters": [
+        133,
+        134,
+        135
+      ],
+      "filler": false,
+      "firstChapter": 133,
+      "lastChapter": 135,
+      "nextChapter": 136
+    },
+    "79": {
+      "chapters": [
+        136,
+        137
+      ],
+      "filler": false,
+      "firstChapter": 136,
+      "lastChapter": 137,
+      "nextChapter": 138
+    },
+    "80": {
+      "chapters": [
+        138,
+        139
+      ],
+      "filler": false,
+      "firstChapter": 138,
+      "lastChapter": 139,
+      "nextChapter": 140
+    },
+    "81": {
+      "chapters": [
+        140,
+        141
+      ],
+      "filler": false,
+      "firstChapter": 140,
+      "lastChapter": 141,
+      "nextChapter": 142
+    },
+    "82": {
+      "chapters": [
+        142,
+        143
+      ],
+      "filler": false,
+      "firstChapter": 142,
+      "lastChapter": 143,
+      "nextChapter": 144
+    },
+    "83": {
+      "chapters": [
+        143,
+        144
+      ],
+      "filler": false,
+      "firstChapter": 143,
+      "lastChapter": 144,
+      "nextChapter": 145
+    },
+    "84": {
+      "chapters": [
+        145,
+        146
+      ],
+      "filler": false,
+      "firstChapter": 145,
+      "lastChapter": 146,
+      "nextChapter": 147
+    },
+    "85": {
+      "chapters": [
+        147,
+        148
+      ],
+      "filler": false,
+      "firstChapter": 147,
+      "lastChapter": 148,
+      "nextChapter": 149
+    },
+    "86": {
+      "chapters": [
+        149,
+        150
+      ],
+      "filler": false,
+      "firstChapter": 149,
+      "lastChapter": 150,
+      "nextChapter": 151
+    },
+    "87": {
+      "chapters": [
+        151
+      ],
+      "filler": false,
+      "firstChapter": 151,
+      "lastChapter": 151,
+      "nextChapter": 152
+    },
+    "88": {
+      "chapters": [
+        152,
+        153,
+        154
+      ],
+      "filler": false,
+      "firstChapter": 152,
+      "lastChapter": 154,
+      "nextChapter": 155
+    },
+    "89": {
+      "chapters": [
+        155,
+        156,
+        157
+      ],
+      "filler": false,
+      "firstChapter": 155,
+      "lastChapter": 157,
+      "nextChapter": 158
+    },
+    "90": {
+      "chapters": [
+        157,
+        158
+      ],
+      "filler": false,
+      "firstChapter": 157,
+      "lastChapter": 158,
+      "nextChapter": 159
+    },
+    "91": {
+      "chapters": [
+        159,
+        160
+      ],
+      "filler": false,
+      "firstChapter": 159,
+      "lastChapter": 160,
+      "nextChapter": 161
+    },
+    "92": {
+      "chapters": [
+        161,
+        162,
+        163
+      ],
+      "filler": false,
+      "firstChapter": 161,
+      "lastChapter": 163,
+      "nextChapter": 164
+    },
+    "93": {
+      "chapters": [
+        163,
+        164,
+        165
+      ],
+      "filler": false,
+      "firstChapter": 163,
+      "lastChapter": 165,
+      "nextChapter": 166
+    },
+    "94": {
+      "chapters": [
+        165,
+        166,
+        167
+      ],
+      "filler": false,
+      "firstChapter": 165,
+      "lastChapter": 167,
+      "nextChapter": 168
+    },
+    "95": {
+      "chapters": [
+        168,
+        169
+      ],
+      "filler": false,
+      "firstChapter": 168,
+      "lastChapter": 169,
+      "nextChapter": 170
+    },
+    "96": {
+      "chapters": [
+        170,
+        171
+      ],
+      "filler": false,
+      "firstChapter": 170,
+      "lastChapter": 171,
+      "nextChapter": 172
+    },
+    "97": {
+      "chapters": [],
+      "filler": true,
+      "firstChapter": null,
+      "lastChapter": null,
+      "nextChapter": 172
+    },
+    "98": {
+      "chapters": [
+        172,
+        173
+      ],
+      "filler": false,
+      "firstChapter": 172,
+      "lastChapter": 173,
+      "nextChapter": 174
+    },
+    "99": {
+      "chapters": [
+        177
+      ],
+      "filler": false,
+      "firstChapter": 177,
+      "lastChapter": 177,
+      "nextChapter": 178
+    },
+    "100": {
+      "chapters": [
+        179,
+        180
+      ],
+      "filler": false,
+      "firstChapter": 179,
+      "lastChapter": 180,
+      "nextChapter": 181
+    },
+    "101": {
+      "chapters": [],
+      "filler": true,
+      "firstChapter": null,
+      "lastChapter": null,
+      "nextChapter": 181
+    },
+    "102": {
+      "chapters": [],
+      "filler": true,
+      "firstChapter": null,
+      "lastChapter": null,
+      "nextChapter": 181
+    },
+    "103": {
+      "chapters": [],
+      "filler": true,
+      "firstChapter": null,
+      "lastChapter": null,
+      "nextChapter": 181
+    },
+    "104": {
+      "chapters": [],
+      "filler": true,
+      "firstChapter": null,
+      "lastChapter": null,
+      "nextChapter": 181
+    },
+    "105": {
+      "chapters": [],
+      "filler": true,
+      "firstChapter": null,
+      "lastChapter": null,
+      "nextChapter": 181
+    },
+    "106": {
+      "chapters": [
+        700
+      ],
+      "filler": false,
+      "firstChapter": 700,
+      "lastChapter": 700,
+      "nextChapter": 701
+    },
+    "107": {
+      "chapters": [
+        173,
+        174,
+        175,
+        184
+      ],
+      "filler": false,
+      "firstChapter": 173,
+      "lastChapter": 184,
+      "nextChapter": 185
+    },
+    "108": {
+      "chapters": [
+        176,
+        177
+      ],
+      "filler": false,
+      "firstChapter": 176,
+      "lastChapter": 177,
+      "nextChapter": 178
+    },
+    "109": {
+      "chapters": [
+        178,
+        179,
+        181
+      ],
+      "filler": false,
+      "firstChapter": 178,
+      "lastChapter": 181,
+      "nextChapter": 182
+    },
+    "110": {
+      "chapters": [
+        182,
+        183
+      ],
+      "filler": false,
+      "firstChapter": 182,
+      "lastChapter": 183,
+      "nextChapter": 184
+    },
+    "111": {
+      "chapters": [
+        184,
+        185,
+        186
+      ],
+      "filler": false,
+      "firstChapter": 184,
+      "lastChapter": 186,
+      "nextChapter": 187
+    },
+    "112": {
+      "chapters": [
+        186,
+        187
+      ],
+      "filler": false,
+      "firstChapter": 186,
+      "lastChapter": 187,
+      "nextChapter": 188
+    },
+    "113": {
+      "chapters": [
+        188,
+        189
+      ],
+      "filler": false,
+      "firstChapter": 188,
+      "lastChapter": 189,
+      "nextChapter": 190
+    },
+    "114": {
+      "chapters": [
+        189,
+        190,
+        191
+      ],
+      "filler": false,
+      "firstChapter": 189,
+      "lastChapter": 191,
+      "nextChapter": 192
+    },
+    "115": {
+      "chapters": [
+        191,
+        192,
+        193
+      ],
+      "filler": false,
+      "firstChapter": 191,
+      "lastChapter": 193,
+      "nextChapter": 194
+    },
+    "116": {
+      "chapters": [
+        194,
+        195
+      ],
+      "filler": false,
+      "firstChapter": 194,
+      "lastChapter": 195,
+      "nextChapter": 196
+    },
+    "117": {
+      "chapters": [
+        196,
+        197,
+        198
+      ],
+      "filler": false,
+      "firstChapter": 196,
+      "lastChapter": 198,
+      "nextChapter": 199
+    },
+    "118": {
+      "chapters": [
+        198,
+        199,
+        200
+      ],
+      "filler": false,
+      "firstChapter": 198,
+      "lastChapter": 200,
+      "nextChapter": 201
+    },
+    "119": {
+      "chapters": [
+        200,
+        201,
+        202
+      ],
+      "filler": false,
+      "firstChapter": 200,
+      "lastChapter": 202,
+      "nextChapter": 203
+    },
+    "120": {
+      "chapters": [
+        203,
+        204
+      ],
+      "filler": false,
+      "firstChapter": 203,
+      "lastChapter": 204,
+      "nextChapter": 205
+    },
+    "121": {
+      "chapters": [
+        205,
+        206
+      ],
+      "filler": false,
+      "firstChapter": 205,
+      "lastChapter": 206,
+      "nextChapter": 207
+    },
+    "122": {
+      "chapters": [
+        207,
+        208
+      ],
+      "filler": false,
+      "firstChapter": 207,
+      "lastChapter": 208,
+      "nextChapter": 209
+    },
+    "123": {
+      "chapters": [
+        209,
+        210
+      ],
+      "filler": false,
+      "firstChapter": 209,
+      "lastChapter": 210,
+      "nextChapter": 211
+    },
+    "124": {
+      "chapters": [
+        211,
+        212
+      ],
+      "filler": false,
+      "firstChapter": 211,
+      "lastChapter": 212,
+      "nextChapter": 213
+    },
+    "125": {
+      "chapters": [
+        213,
+        214,
+        215
+      ],
+      "filler": false,
+      "firstChapter": 213,
+      "lastChapter": 215,
+      "nextChapter": 216
+    },
+    "126": {
+      "chapters": [
+        215,
+        216
+      ],
+      "filler": false,
+      "firstChapter": 215,
+      "lastChapter": 216,
+      "nextChapter": 217
+    },
+    "127": {
+      "chapters": [
+        216,
+        217
+      ],
+      "filler": false,
+      "firstChapter": 216,
+      "lastChapter": 217,
+      "nextChapter": 218
+    },
+    "128": {
+      "chapters": [
+        218,
+        219
+      ],
+      "filler": false,
+      "firstChapter": 218,
+      "lastChapter": 219,
+      "nextChapter": 220
+    },
+    "129": {
+      "chapters": [
+        220,
+        221,
+        222
+      ],
+      "filler": false,
+      "firstChapter": 220,
+      "lastChapter": 222,
+      "nextChapter": 223
+    },
+    "130": {
+      "chapters": [
+        223,
+        224
+      ],
+      "filler": false,
+      "firstChapter": 223,
+      "lastChapter": 224,
+      "nextChapter": 225
+    },
+    "131": {
+      "chapters": [
+        224,
+        225
+      ],
+      "filler": false,
+      "firstChapter": 224,
+      "lastChapter": 225,
+      "nextChapter": 226
+    },
+    "132": {
+      "chapters": [
+        226,
+        227,
+        228
+      ],
+      "filler": false,
+      "firstChapter": 226,
+      "lastChapter": 228,
+      "nextChapter": 229
+    },
+    "133": {
+      "chapters": [
+        229,
+        230,
+        231
+      ],
+      "filler": false,
+      "firstChapter": 229,
+      "lastChapter": 231,
+      "nextChapter": 232
+    },
+    "134": {
+      "chapters": [
+        231,
+        232,
+        233,
+        234,
+        235
+      ],
+      "filler": false,
+      "firstChapter": 231,
+      "lastChapter": 235,
+      "nextChapter": 236
+    },
+    "135": {
+      "chapters": [
+        235,
+        236,
+        237,
+        238
+      ],
+      "filler": false,
+      "firstChapter": 235,
+      "lastChapter": 238,
+      "nextChapter": 239
+    },
+    "136": {
+      "chapters": [],
+      "filler": true,
+      "firstChapter": null,
+      "lastChapter": null,
+      "nextChapter": 239
+    },
+    "137": {
+      "chapters": [],
+      "filler": true,
+      "firstChapter": null,
+      "lastChapter": null,
+      "nextChapter": 239
+    },
+    "138": {
+      "chapters": [],
+      "filler": true,
+      "firstChapter": null,
+      "lastChapter": null,
+      "nextChapter": 239
+    },
+    "139": {
+      "chapters": [],
+      "filler": true,
+      "firstChapter": null,
+      "lastChapter": null,
+      "nextChapter": 239
+    },
+    "140": {
+      "chapters": [],
+      "filler": true,
+      "firstChapter": null,
+      "lastChapter": null,
+      "nextChapter": 239
+    },
+    "141": {
+      "chapters": [
+        236
+      ],
+      "filler": false,
+      "firstChapter": 236,
+      "lastChapter": 236,
+      "nextChapter": 237
+    },
+    "142": {
+      "chapters": [
+        238
+      ],
+      "filler": false,
+      "firstChapter": 238,
+      "lastChapter": 238,
+      "nextChapter": 239
+    },
+    "143": {
+      "chapters": [],
+      "filler": true,
+      "firstChapter": null,
+      "lastChapter": null,
+      "nextChapter": 239
+    },
+    "144": {
+      "chapters": [],
+      "filler": true,
+      "firstChapter": null,
+      "lastChapter": null,
+      "nextChapter": 239
+    },
+    "145": {
+      "chapters": [],
+      "filler": true,
+      "firstChapter": null,
+      "lastChapter": null,
+      "nextChapter": 239
+    },
+    "146": {
+      "chapters": [],
+      "filler": true,
+      "firstChapter": null,
+      "lastChapter": null,
+      "nextChapter": 239
+    },
+    "147": {
+      "chapters": [],
+      "filler": true,
+      "firstChapter": null,
+      "lastChapter": null,
+      "nextChapter": 239
+    },
+    "148": {
+      "chapters": [],
+      "filler": true,
+      "firstChapter": null,
+      "lastChapter": null,
+      "nextChapter": 239
+    },
+    "149": {
+      "chapters": [],
+      "filler": true,
+      "firstChapter": null,
+      "lastChapter": null,
+      "nextChapter": 239
+    },
+    "150": {
+      "chapters": [],
+      "filler": true,
+      "firstChapter": null,
+      "lastChapter": null,
+      "nextChapter": 239
+    },
+    "151": {
+      "chapters": [],
+      "filler": true,
+      "firstChapter": null,
+      "lastChapter": null,
+      "nextChapter": 239
+    },
+    "152": {
+      "chapters": [],
+      "filler": true,
+      "firstChapter": null,
+      "lastChapter": null,
+      "nextChapter": 239
+    },
+    "153": {
+      "chapters": [],
+      "filler": true,
+      "firstChapter": null,
+      "lastChapter": null,
+      "nextChapter": 239
+    },
+    "154": {
+      "chapters": [],
+      "filler": true,
+      "firstChapter": null,
+      "lastChapter": null,
+      "nextChapter": 239
+    },
+    "155": {
+      "chapters": [],
+      "filler": true,
+      "firstChapter": null,
+      "lastChapter": null,
+      "nextChapter": 239
+    },
+    "156": {
+      "chapters": [],
+      "filler": true,
+      "firstChapter": null,
+      "lastChapter": null,
+      "nextChapter": 239
+    },
+    "157": {
+      "chapters": [],
+      "filler": true,
+      "firstChapter": null,
+      "lastChapter": null,
+      "nextChapter": 239
+    },
+    "158": {
+      "chapters": [],
+      "filler": true,
+      "firstChapter": null,
+      "lastChapter": null,
+      "nextChapter": 239
+    },
+    "159": {
+      "chapters": [],
+      "filler": true,
+      "firstChapter": null,
+      "lastChapter": null,
+      "nextChapter": 239
+    },
+    "160": {
+      "chapters": [],
+      "filler": true,
+      "firstChapter": null,
+      "lastChapter": null,
+      "nextChapter": 239
+    },
+    "161": {
+      "chapters": [],
+      "filler": true,
+      "firstChapter": null,
+      "lastChapter": null,
+      "nextChapter": 239
+    },
+    "162": {
+      "chapters": [],
+      "filler": true,
+      "firstChapter": null,
+      "lastChapter": null,
+      "nextChapter": 239
+    },
+    "163": {
+      "chapters": [],
+      "filler": true,
+      "firstChapter": null,
+      "lastChapter": null,
+      "nextChapter": 239
+    },
+    "164": {
+      "chapters": [],
+      "filler": true,
+      "firstChapter": null,
+      "lastChapter": null,
+      "nextChapter": 239
+    },
+    "165": {
+      "chapters": [],
+      "filler": true,
+      "firstChapter": null,
+      "lastChapter": null,
+      "nextChapter": 239
+    },
+    "166": {
+      "chapters": [],
+      "filler": true,
+      "firstChapter": null,
+      "lastChapter": null,
+      "nextChapter": 239
+    },
+    "167": {
+      "chapters": [],
+      "filler": true,
+      "firstChapter": null,
+      "lastChapter": null,
+      "nextChapter": 239
+    },
+    "168": {
+      "chapters": [],
+      "filler": true,
+      "firstChapter": null,
+      "lastChapter": null,
+      "nextChapter": 239
+    },
+    "169": {
+      "chapters": [],
+      "filler": true,
+      "firstChapter": null,
+      "lastChapter": null,
+      "nextChapter": 239
+    },
+    "170": {
+      "chapters": [],
+      "filler": true,
+      "firstChapter": null,
+      "lastChapter": null,
+      "nextChapter": 239
+    },
+    "171": {
+      "chapters": [],
+      "filler": true,
+      "firstChapter": null,
+      "lastChapter": null,
+      "nextChapter": 239
+    },
+    "172": {
+      "chapters": [],
+      "filler": true,
+      "firstChapter": null,
+      "lastChapter": null,
+      "nextChapter": 239
+    },
+    "173": {
+      "chapters": [],
+      "filler": true,
+      "firstChapter": null,
+      "lastChapter": null,
+      "nextChapter": 239
+    },
+    "174": {
+      "chapters": [],
+      "filler": true,
+      "firstChapter": null,
+      "lastChapter": null,
+      "nextChapter": 239
+    },
+    "175": {
+      "chapters": [],
+      "filler": true,
+      "firstChapter": null,
+      "lastChapter": null,
+      "nextChapter": 239
+    },
+    "176": {
+      "chapters": [],
+      "filler": true,
+      "firstChapter": null,
+      "lastChapter": null,
+      "nextChapter": 239
+    },
+    "177": {
+      "chapters": [],
+      "filler": true,
+      "firstChapter": null,
+      "lastChapter": null,
+      "nextChapter": 239
+    },
+    "178": {
+      "chapters": [],
+      "filler": true,
+      "firstChapter": null,
+      "lastChapter": null,
+      "nextChapter": 239
+    },
+    "179": {
+      "chapters": [],
+      "filler": true,
+      "firstChapter": null,
+      "lastChapter": null,
+      "nextChapter": 239
+    },
+    "180": {
+      "chapters": [],
+      "filler": true,
+      "firstChapter": null,
+      "lastChapter": null,
+      "nextChapter": 239
+    },
+    "181": {
+      "chapters": [],
+      "filler": true,
+      "firstChapter": null,
+      "lastChapter": null,
+      "nextChapter": 239
+    },
+    "182": {
+      "chapters": [],
+      "filler": true,
+      "firstChapter": null,
+      "lastChapter": null,
+      "nextChapter": 239
+    },
+    "183": {
+      "chapters": [],
+      "filler": true,
+      "firstChapter": null,
+      "lastChapter": null,
+      "nextChapter": 239
+    },
+    "184": {
+      "chapters": [],
+      "filler": true,
+      "firstChapter": null,
+      "lastChapter": null,
+      "nextChapter": 239
+    },
+    "185": {
+      "chapters": [],
+      "filler": true,
+      "firstChapter": null,
+      "lastChapter": null,
+      "nextChapter": 239
+    },
+    "186": {
+      "chapters": [],
+      "filler": true,
+      "firstChapter": null,
+      "lastChapter": null,
+      "nextChapter": 239
+    },
+    "187": {
+      "chapters": [],
+      "filler": true,
+      "firstChapter": null,
+      "lastChapter": null,
+      "nextChapter": 239
+    },
+    "188": {
+      "chapters": [],
+      "filler": true,
+      "firstChapter": null,
+      "lastChapter": null,
+      "nextChapter": 239
+    },
+    "189": {
+      "chapters": [],
+      "filler": true,
+      "firstChapter": null,
+      "lastChapter": null,
+      "nextChapter": 239
+    },
+    "190": {
+      "chapters": [],
+      "filler": true,
+      "firstChapter": null,
+      "lastChapter": null,
+      "nextChapter": 239
+    },
+    "191": {
+      "chapters": [],
+      "filler": true,
+      "firstChapter": null,
+      "lastChapter": null,
+      "nextChapter": 239
+    },
+    "192": {
+      "chapters": [],
+      "filler": true,
+      "firstChapter": null,
+      "lastChapter": null,
+      "nextChapter": 239
+    },
+    "193": {
+      "chapters": [],
+      "filler": true,
+      "firstChapter": null,
+      "lastChapter": null,
+      "nextChapter": 239
+    },
+    "194": {
+      "chapters": [],
+      "filler": true,
+      "firstChapter": null,
+      "lastChapter": null,
+      "nextChapter": 239
+    },
+    "195": {
+      "chapters": [],
+      "filler": true,
+      "firstChapter": null,
+      "lastChapter": null,
+      "nextChapter": 239
+    },
+    "196": {
+      "chapters": [],
+      "filler": true,
+      "firstChapter": null,
+      "lastChapter": null,
+      "nextChapter": 239
+    },
+    "197": {
+      "chapters": [],
+      "filler": true,
+      "firstChapter": null,
+      "lastChapter": null,
+      "nextChapter": 239
+    },
+    "198": {
+      "chapters": [],
+      "filler": true,
+      "firstChapter": null,
+      "lastChapter": null,
+      "nextChapter": 239
+    },
+    "199": {
+      "chapters": [],
+      "filler": true,
+      "firstChapter": null,
+      "lastChapter": null,
+      "nextChapter": 239
+    },
+    "200": {
+      "chapters": [],
+      "filler": true,
+      "firstChapter": null,
+      "lastChapter": null,
+      "nextChapter": 239
+    },
+    "201": {
+      "chapters": [],
+      "filler": true,
+      "firstChapter": null,
+      "lastChapter": null,
+      "nextChapter": 239
+    },
+    "202": {
+      "chapters": [],
+      "filler": true,
+      "firstChapter": null,
+      "lastChapter": null,
+      "nextChapter": 239
+    },
+    "203": {
+      "chapters": [],
+      "filler": true,
+      "firstChapter": null,
+      "lastChapter": null,
+      "nextChapter": 239
+    },
+    "204": {
+      "chapters": [],
+      "filler": true,
+      "firstChapter": null,
+      "lastChapter": null,
+      "nextChapter": 239
+    },
+    "205": {
+      "chapters": [],
+      "filler": true,
+      "firstChapter": null,
+      "lastChapter": null,
+      "nextChapter": 239
+    },
+    "206": {
+      "chapters": [],
+      "filler": true,
+      "firstChapter": null,
+      "lastChapter": null,
+      "nextChapter": 239
+    },
+    "207": {
+      "chapters": [],
+      "filler": true,
+      "firstChapter": null,
+      "lastChapter": null,
+      "nextChapter": 239
+    },
+    "208": {
+      "chapters": [],
+      "filler": true,
+      "firstChapter": null,
+      "lastChapter": null,
+      "nextChapter": 239
+    },
+    "209": {
+      "chapters": [],
+      "filler": true,
+      "firstChapter": null,
+      "lastChapter": null,
+      "nextChapter": 239
+    },
+    "210": {
+      "chapters": [],
+      "filler": true,
+      "firstChapter": null,
+      "lastChapter": null,
+      "nextChapter": 239
+    },
+    "211": {
+      "chapters": [],
+      "filler": true,
+      "firstChapter": null,
+      "lastChapter": null,
+      "nextChapter": 239
+    },
+    "212": {
+      "chapters": [],
+      "filler": true,
+      "firstChapter": null,
+      "lastChapter": null,
+      "nextChapter": 239
+    },
+    "213": {
+      "chapters": [],
+      "filler": true,
+      "firstChapter": null,
+      "lastChapter": null,
+      "nextChapter": 239
+    },
+    "214": {
+      "chapters": [],
+      "filler": true,
+      "firstChapter": null,
+      "lastChapter": null,
+      "nextChapter": 239
+    },
+    "215": {
+      "chapters": [],
+      "filler": true,
+      "firstChapter": null,
+      "lastChapter": null,
+      "nextChapter": 239
+    },
+    "216": {
+      "chapters": [],
+      "filler": true,
+      "firstChapter": null,
+      "lastChapter": null,
+      "nextChapter": 239
+    },
+    "217": {
+      "chapters": [],
+      "filler": true,
+      "firstChapter": null,
+      "lastChapter": null,
+      "nextChapter": 239
+    },
+    "218": {
+      "chapters": [],
+      "filler": true,
+      "firstChapter": null,
+      "lastChapter": null,
+      "nextChapter": 239
+    },
+    "219": {
+      "chapters": [],
+      "filler": true,
+      "firstChapter": null,
+      "lastChapter": null,
+      "nextChapter": 239
+    },
+    "220": {
+      "chapters": [
+        238
+      ],
+      "filler": false,
+      "firstChapter": 238,
+      "lastChapter": 238,
+      "nextChapter": 239
+    }
+  }
+}

@@ -64,3 +64,9 @@ export async function getChapterPages(chapterId, mangaId) {
   if (!res.ok) throw new Error('Failed to fetch chapter pages')
   return res.json()
 }
+
+export async function getAdaptation(animeId, episode) {
+  const res = await fetch(`${BASE}/adaptation?animeId=${encodeURIComponent(animeId)}&episode=${encodeURIComponent(episode)}`)
+  if (!res.ok) return null
+  return res.json()
+}
