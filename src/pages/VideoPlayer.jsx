@@ -103,7 +103,9 @@ export default function VideoPlayer() {
     if (Hls.isSupported()) {
       const hls = new Hls({
         xhrSetup: (xhr, reqUrl) => {
-          if (reqUrl.startsWith('/api/media/proxy')) return
+          let u
+          try { u = new URL(reqUrl, window.location.origin) } catch { u = null }
+          if (u && u.pathname === '/api/media/proxy') return
           xhr.open('GET', proxyUrl(reqUrl, cdnHeaders), true)
         },
         maxBufferLength: 30,

@@ -361,22 +361,26 @@ export async function chapters(id, lang = 'en', limit = 100, offset = 0) {
 // used for titles that differ only by localization (e.g. "wa Koi o Suru" vs
 // "wa Koi wo Suru") where a strict match would miss the same series.
 async function findChapterSource(title, excludeProvider) {
-  const best = { score: 0, src: null }
-  for (const name of FALLBACK_ORDER) {
-    if (name === excludeProvider) continue
-    try {
-      const res = await PROVIDERS[name].search(title, 20, 0)
-      for (const item of res.data) {
-        const score = scoreCandidate(title, item)
-        if (score > best.score) {
-          best.score = score
-          best.src = { name, id: item.id }
-        }
+  const names = FALLBACK_ORDER.filter((name) => name !== excludeProvider)
+  const settled = await Promise.allSettled(
+    names.map((name) =>
+      PROVIDERS[name].search(title, 20, 0).catch((err) => {
+        console.error(`[manga] ${name} chapter-source search failed:`, err.message)
+        return { data: [] }
+      })
+    )
+  )
+  let best = { score: 0, src: null }
+  settled.forEach((r, i) => {
+    if (r.status === 'rejected') return
+    for (const item of r.value.data) {
+      const score = scoreCandidate(title, item)
+      if (score > best.score) {
+        best.score = score
+        best.src = { name: names[i], id: item.id }
       }
-    } catch (err) {
-      console.error(`[manga] ${name} chapter-source search failed:`, err.message)
     }
-  }
+  })
   return best.score >= 0.6 ? best.src : null
 }
 

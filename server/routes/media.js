@@ -21,6 +21,9 @@ function rewriteM3u8(content, baseUrl, encH) {
 router.get('/media/proxy', async (req, res) => {
   const url = req.query.url
   if (!url) return res.status(400).send('url required')
+  if (url.includes('/api/media/proxy?') || url.includes('/api/stream/proxy?')) {
+    return res.status(400).send('proxy loop prevented')
+  }
 
   const providerHeaders = decodeHeaders(req.query.h || '')
   const parsed = new URL(url)
@@ -36,7 +39,7 @@ router.get('/media/proxy', async (req, res) => {
           'Origin': providerHeaders.Origin || providerHeaders.origin || origin,
         },
       },
-      { provider: 'media-proxy', label: url.substring(0, 120), timeoutMs: 60000, retries: 0, allowNonOk: true }
+      { provider: 'media-proxy', label: url.substring(0, 120), timeoutMs: 60000, retries: 0, allowNonOk: true, breaker: false }
     )
 
     if (!response.ok) {
