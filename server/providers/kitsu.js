@@ -1,13 +1,16 @@
 import { titleScore, normalizeTitle, isDoujinshiOrColored } from './util.js'
 import { normalizeProvider } from './interface.js'
+import { fetchWithTimeout } from '../utils/http.js'
 
 const API = 'https://kitsu.io/api/edge'
 const PROVIDER = 'kitsu'
 
 async function api(path) {
-  const res = await fetch(API + path, {
-    headers: { Accept: 'application/vnd.api+json' },
-  })
+  const res = await fetchWithTimeout(
+    API + path,
+    { headers: { Accept: 'application/vnd.api+json' } },
+    { provider: PROVIDER }
+  )
   if (!res.ok) throw new Error(`Kitsu ${res.status}`)
   return res.json()
 }

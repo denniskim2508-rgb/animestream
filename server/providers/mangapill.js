@@ -1,5 +1,6 @@
 import { titleScore, normalizeTitle, isDoujinshiOrColored, encodeHeaders } from './util.js'
 import { normalizeProvider } from './interface.js'
+import { fetchWithTimeout } from '../utils/http.js'
 
 const SITE = 'https://mangapill.com'
 const PROVIDER = 'mangapill'
@@ -7,9 +8,11 @@ const UA =
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36'
 
 async function fetchHtml(url) {
-  const res = await fetch(url, {
-    headers: { 'User-Agent': UA, Referer: `${SITE}/` },
-  })
+  const res = await fetchWithTimeout(
+    url,
+    { headers: { 'User-Agent': UA, Referer: `${SITE}/` } },
+    { provider: PROVIDER }
+  )
   if (!res.ok) throw new Error(`Mangapill ${res.status}`)
   return res.text()
 }
@@ -215,10 +218,11 @@ export async function pages(ref) {
 }
 
 export async function random() {
-  const res = await fetch(`${SITE}/mangas/random`, {
-    headers: { 'User-Agent': UA, Referer: `${SITE}/` },
-    redirect: 'follow',
-  })
+  const res = await fetchWithTimeout(
+    `${SITE}/mangas/random`,
+    { headers: { 'User-Agent': UA, Referer: `${SITE}/` }, redirect: 'follow' },
+    { provider: PROVIDER, retries: 0 }
+  )
   const html = await res.text()
   const m = res.url.match(/\/manga\/(\d+)\//)
   if (!m) return { data: null }

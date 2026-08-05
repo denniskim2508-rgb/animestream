@@ -1,13 +1,13 @@
 import { normalizeTitle, titleScore, isDoujinshiOrColored } from './util.js'
 import { normalizeProvider } from './interface.js'
+import { fetchWithTimeout } from '../utils/http.js'
 
 const API = 'https://api.mangadex.org'
 const COVERS = 'https://uploads.mangadex.org/covers'
 const PROVIDER = 'mangadex'
 
 export async function mangadexFetch(url) {
-  const res = await fetch(url, { headers: { 'Accept': 'application/json' } })
-  if (!res.ok) throw new Error(`MangaDex API ${res.status}: ${res.statusText}`)
+  const res = await fetchWithTimeout(url, { headers: { 'Accept': 'application/json' } }, { provider: PROVIDER })
   return res.json()
 }
 

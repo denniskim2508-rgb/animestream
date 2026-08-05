@@ -42,17 +42,20 @@ const MEDIA_FRAGMENT = `
   studios(isMain: true) { nodes { name } }
 `
 
+// The homepage rows now come from the backend (/api/anime/home), which runs the
+// six AniList queries server-side with a 5-minute cache + single-flight. The
+// raw media nodes are normalized here exactly as before, so callers see an
+// unchanged shape.
 export async function fetchHomepageData(perPage = 10) {
-  const safe = (p) => p.catch(() => [])
-  const [trending, topRated, popular, recentlyUpdated, newReleases, upcoming] = await Promise.all([
-    safe(fetchTrendingAnime(1, perPage)),
-    safe(fetchTopRatedAnime(1, perPage)),
-    safe(fetchPopularAnime(1, perPage)),
-    safe(fetchRecentlyUpdated(1, perPage)),
-    safe(fetchNewReleases(1, perPage)),
-    safe(fetchTopUpcoming(1, perPage)),
-  ])
-  return { trending, topRated, popular, recentlyUpdated, newReleases, upcoming }
+  const res = await fetch(`/api/anime/home?perPage=${perPage}`)
+  if (!res.ok) throw new Error(`Anime home fetch failed: ${res.status}`)
+  const data = await res.json()
+  const rows = ['trending', 'topRated', 'popular', 'recentlyUpdated', 'newReleases', 'upcoming']
+  const out = {}
+  for (const key of rows) {
+    out[key] = (data[key] || []).map(normalizeMedia)
+  }
+  return out
 }
 
 export async function fetchTrendingAnime(page = 1, perPage = 10) {

@@ -1,5 +1,6 @@
 import { titleScore, normalizeTitle, isDoujinshiOrColored } from './util.js'
 import { normalizeProvider } from './interface.js'
+import { fetchWithTimeout } from '../utils/http.js'
 
 const API = 'https://api.asurascans.com/api'
 const PROVIDER = 'asurascans'
@@ -7,9 +8,11 @@ const UA =
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36'
 
 async function api(path) {
-  const res = await fetch(API + path, {
-    headers: { 'User-Agent': UA, Accept: 'application/json' },
-  })
+  const res = await fetchWithTimeout(
+    API + path,
+    { headers: { 'User-Agent': UA, Accept: 'application/json' } },
+    { provider: PROVIDER }
+  )
   if (!res.ok) throw new Error(`AsuraScans ${res.status}`)
   return res.json()
 }

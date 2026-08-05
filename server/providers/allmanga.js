@@ -1,5 +1,6 @@
 import { titleScore, normalizeTitle, isDoujinshiOrColored, encodeHeaders } from './util.js'
 import { normalizeProvider } from './interface.js'
+import { fetchWithTimeout } from '../utils/http.js'
 
 const API = 'https://api.allanime.day/api'
 const SITE = 'https://allmanga.to'
@@ -13,11 +14,15 @@ const HEADERS = {
 }
 
 async function gql(query, variables = {}) {
-  const res = await fetch(API, {
-    method: 'POST',
-    headers: HEADERS,
-    body: JSON.stringify({ query, variables }),
-  })
+  const res = await fetchWithTimeout(
+    API,
+    {
+      method: 'POST',
+      headers: HEADERS,
+      body: JSON.stringify({ query, variables }),
+    },
+    { provider: PROVIDER }
+  )
   const json = await res.json().catch(() => null)
   if (!json || json.errors) {
     throw new Error(json?.errors?.[0]?.message || `AllManga API ${res.status}`)

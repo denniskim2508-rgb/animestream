@@ -1,5 +1,6 @@
 import { titleScore, normalizeTitle } from './util.js'
 import { normalizeProvider } from './interface.js'
+import { fetchWithTimeout } from '../utils/http.js'
 
 const BASE = 'https://atsu.moe'
 const PROVIDER = 'atsu'
@@ -10,10 +11,14 @@ const UA =
 // Hono `/api` (detail/chapters/reader). No Cloudflare challenge and image
 // hosts allow direct hotlinking, so everything is plain fetch.
 async function api(path, init = {}) {
-  const res = await fetch(BASE + path, {
-    ...init,
-    headers: { 'User-Agent': UA, Accept: 'application/json', ...(init.headers || {}) },
-  })
+  const res = await fetchWithTimeout(
+    BASE + path,
+    {
+      ...init,
+      headers: { 'User-Agent': UA, Accept: 'application/json', ...(init.headers || {}) },
+    },
+    { provider: PROVIDER }
+  )
   if (!res.ok) throw new Error(`Atsu ${res.status}`)
   return res.json()
 }
