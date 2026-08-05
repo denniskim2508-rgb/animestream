@@ -24,8 +24,14 @@ import {
 import { auth, db } from '../firebase'
 import { getRandomAvatar } from '../data/avatars'
 import { THEMES, DEFAULT_THEME } from '../data/themes'
+import { ADMIN_EMAILS } from '../config/admin'
 
 const AuthContext = createContext(null)
+
+function isAdminEmail(email) {
+  const e = String(email || '').trim().toLowerCase()
+  return e.length > 0 && ADMIN_EMAILS.some((a) => String(a).trim().toLowerCase() === e)
+}
 
 function applyAccent(name) {
   const theme = THEMES[name] || THEMES[DEFAULT_THEME]
@@ -82,6 +88,7 @@ export function AuthProvider({ children }) {
   userRef.current = user
 
   const unreadCount = notifications.filter((n) => !n.read).length
+  const isAdmin = isAdminEmail(user?.email)
 
   const setAccent = useCallback(async (name) => {
     const valid = THEMES[name] ? name : DEFAULT_THEME
@@ -340,6 +347,7 @@ export function AuthProvider({ children }) {
       value={{
         user,
         loading,
+        isAdmin,
         login,
         signup,
         logout,

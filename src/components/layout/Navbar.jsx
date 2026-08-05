@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
-import { Search, Bell, Menu, X, User, ChevronDown, LogOut, Settings, Crown, Film, Play, List, Download, RefreshCw, BookOpen } from 'lucide-react'
+import { Search, Bell, Menu, X, User, ChevronDown, LogOut, Settings, Crown, Film, Play, List, Download, RefreshCw, BookOpen, Server } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 
 const navLinks = [
@@ -19,7 +19,7 @@ export default function Navbar() {
   const [searchQuery, setSearchQuery] = useState('')
   const [importOpen, setImportOpen] = useState(false)
   const [syncOpen, setSyncOpen] = useState(false)
-  const { user, logout, audioMode, setAudioMode, unreadCount } = useAuth()
+  const { user, logout, audioMode, setAudioMode, unreadCount, isAdmin } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
 
@@ -214,6 +214,15 @@ export default function Navbar() {
                             </button>
                           )
                         ))}
+                        {isAdmin && (
+                          <Link
+                            to="/admin/providers"
+                            className="flex items-center gap-3 h-12 px-4 text-[13px] font-medium text-[#CBD5E1] hover:text-white hover:bg-white/[0.06] transition-colors duration-200"
+                          >
+                            <Server className="w-[18px] h-[18px]" />
+                            Provider Dashboard
+                          </Link>
+                        )}
                       </nav>
 
                       <div className="border-t border-white/[0.06] pt-1.5 pb-1.5">

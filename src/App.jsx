@@ -24,6 +24,7 @@ import MangaHome from './pages/MangaHome'
 import MangaDetail from './pages/MangaDetail'
 import MangaReader from './pages/MangaReader'
 import MangaSearch from './pages/MangaSearch'
+import AdminProviders from './pages/AdminProviders'
 import { SkeletonPage } from './components/ui/Skeleton'
 
 function PageLoader() {
@@ -201,6 +202,14 @@ export default function App() {
         }
       />
       <Route path="/manga/:id/read/:chapterId" element={<MangaReader />} />
+      <Route
+        path="/admin/providers"
+        element={
+          <Layout>
+            <AdminProviders />
+          </Layout>
+        }
+      />
 
     </Routes>
   )
