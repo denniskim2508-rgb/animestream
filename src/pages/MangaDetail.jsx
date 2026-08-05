@@ -174,7 +174,7 @@ export default function MangaDetail() {
               {chapters.map((ch) => (
                 <Link
                   key={ch.id}
-                  to={`/manga/${id}/read/${ch.id}`}
+                  to={`/manga/${id}/read/${encodeURIComponent(ch.id)}`}
                   className="flex items-center gap-3 px-4 py-2.5 rounded-lg bg-white/[0.02] hover:bg-white/[0.06] border border-white/[0.04] hover:border-white/10 transition-all group"
                 >
                   <span className="w-8 text-center text-xs font-mono text-gray-500 shrink-0">

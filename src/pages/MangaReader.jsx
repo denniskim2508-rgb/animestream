@@ -5,7 +5,16 @@ import { getChapterPages, getMangaChapters, getMangaDetails } from '../api/manga
 import { findAnimeForManga } from '../api/crosslink'
 
 export default function MangaReader() {
-  const { id, chapterId } = useParams()
+  const { id, chapterId: rawChapterId } = useParams()
+  // Some providers (mangapill) embed the full path slug in the chapter id, so
+  // it must be URL-encoded in the route. React Router decodes params already,
+  // but guard against a still-encoded value from older links.
+  let chapterId = rawChapterId
+  try {
+    chapterId = decodeURIComponent(chapterId || '')
+  } catch {
+    // keep raw value if it contains an invalid escape
+  }
   const navigate = useNavigate()
   const [pagesSd, setPagesSd] = useState([])
   const [pagesFull, setPagesFull] = useState([])
@@ -282,7 +291,7 @@ export default function MangaReader() {
         <div className="bg-gradient-to-t from-black/90 to-transparent px-4 py-4">
           <div className="max-w-3xl mx-auto flex items-center justify-between">
             <button
-              onClick={() => prevChapter && navigate(`/manga/${id}/read/${prevChapter.id}`)}
+              onClick={() => prevChapter && navigate(`/manga/${id}/read/${encodeURIComponent(prevChapter.id)}`)}
               disabled={!prevChapter}
               className="flex items-center gap-1.5 px-4 py-2 bg-white/10 hover:bg-white/20 disabled:opacity-30 disabled:cursor-not-allowed text-white text-sm rounded-lg transition-colors"
             >
@@ -310,7 +319,7 @@ export default function MangaReader() {
             </div>
 
             <button
-              onClick={() => nextChapter && navigate(`/manga/${id}/read/${nextChapter.id}`)}
+              onClick={() => nextChapter && navigate(`/manga/${id}/read/${encodeURIComponent(nextChapter.id)}`)}
               disabled={!nextChapter}
               className="flex items-center gap-1.5 px-4 py-2 bg-primary hover:bg-primary-dark disabled:opacity-30 disabled:cursor-not-allowed text-white text-sm rounded-lg transition-colors"
             >
