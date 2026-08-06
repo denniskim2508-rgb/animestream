@@ -139,9 +139,21 @@ export default function Signup() {
             <input type="checkbox" required className="w-4 h-4 mt-0.5 rounded border-gray-600 bg-white/5 text-primary focus:ring-primary/50" />
             <span className="text-sm text-gray-400">
               I agree to the{' '}
-              <span className="text-primary-light hover:underline">Terms of Service</span>
+              <Link
+                to="/terms"
+                onClick={(e) => e.stopPropagation()}
+                className="text-primary font-medium hover:text-primary-light hover:underline cursor-pointer transition-colors duration-150"
+              >
+                Terms of Service
+              </Link>
               {' '}and{' '}
-              <span className="text-primary-light hover:underline">Privacy Policy</span>
+              <Link
+                to="/privacy"
+                onClick={(e) => e.stopPropagation()}
+                className="text-primary font-medium hover:text-primary-light hover:underline cursor-pointer transition-colors duration-150"
+              >
+                Privacy Policy
+              </Link>
             </span>
           </label>
 
