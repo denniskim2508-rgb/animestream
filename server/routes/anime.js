@@ -115,7 +115,9 @@ router.get('/stream/sources', async (req, res) => {
 // Cached AniList homepage data (raw media nodes; the client normalizes them)
 router.get('/anime/home', async (req, res) => {
   try {
-    res.json(await fetchHome(req.query.perPage))
+    const n = Number(req.query.perPage)
+    const perPage = Number.isFinite(n) ? Math.min(Math.max(Math.floor(n), 1), 50) : 20
+    res.json(await fetchHome(perPage))
   } catch (err) {
     console.error('[anime] home error:', err.message)
     res.status(502).json({ error: 'Failed to fetch homepage data' })

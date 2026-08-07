@@ -273,15 +273,6 @@ function CommentItem({ c, user, animeId, episode, onPin, pinnedId, hideSpoilers 
         containsSpoiler: replySpoiler, badges: user.badges || [],
       })
       lastCommentAt = Date.now()
-      if (c.uid && c.uid !== user.uid) {
-        await addDoc(collection(db, 'users', c.uid, 'notifications'), {
-          title: `${user.name} replied to your comment`,
-          body: trimmed.slice(0, 100),
-          type: 'reply', animeId: String(animeId), episode: Number(episode),
-          sender: user.name, senderAvatar: user.avatar || '',
-          commentId: c.id, read: false, createdAt: serverTimestamp(),
-        })
-      }
       setReplyText('')
       setReplySpoiler(false)
       setShowReplies(true)
@@ -289,6 +280,17 @@ function CommentItem({ c, user, animeId, episode, onPin, pinnedId, hideSpoilers 
       setReplyError("Couldn't post your reply. Please try again.")
     }
     setSendingReply(false)
+    if (c.uid && c.uid !== user.uid) {
+      try {
+        await addDoc(collection(db, 'users', c.uid, 'notifications'), {
+          title: `${user.name} replied to your comment`,
+          body: trimmed.slice(0, 100),
+          type: 'reply', animeId: String(animeId), episode: Number(episode),
+          sender: user.name, senderAvatar: user.avatar || '',
+          commentId: c.id, read: false, createdAt: serverTimestamp(),
+        })
+      } catch { /* notification is best-effort, non-fatal */ }
+    }
   }
 
   return (

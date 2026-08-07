@@ -1,3 +1,5 @@
+import { auth } from '../firebase'
+
 // Provider-agnostic manga client. The server-side Provider Manager handles
 // all provider routing/fallback and returns normalized shapes, so this module
 // (and the rest of React) never knows which provider served the data.
@@ -66,7 +68,15 @@ export async function getChapterPages(chapterId, mangaId) {
 }
 
 export async function getAdaptation(animeId, episode) {
-  const res = await fetch(`${BASE}/adaptation?animeId=${encodeURIComponent(animeId)}&episode=${encodeURIComponent(episode)}`)
+  const token = auth.currentUser ? await auth.currentUser.getIdToken() : null
+  const headers = token ? { Authorization: `Bearer ${token}` } : {}
+  const res = await fetch(
+    `${BASE}/adaptation?animeId=${encodeURIComponent(animeId)}&episode=${encodeURIComponent(episode)}`,
+    { headers }
+  )
+  // 401 (sign-in required for the AI path) and 429 (daily AI budget) are
+  // non-fatal: the Continue Reading banner simply stays hidden.
+  if (res.status === 401 || res.status === 429) return null
   if (!res.ok) return null
   return res.json()
 }

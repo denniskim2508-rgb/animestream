@@ -41,14 +41,77 @@ service cloud.firestore {
 
     match /users/{userId} {
       allow read: if request.auth != null && request.auth.uid == userId;
-      allow create: if request.auth != null && request.auth.uid == userId;
-      allow update: if request.auth != null && request.auth.uid == userId;
+
+      // Profile documents are created with a fixed shape only, and privilege /
+      // vanity fields are pinned to safe defaults so a client can't register
+      // with plan:'premium' or inflated stats.
+      allow create: if request.auth != null && request.auth.uid == userId &&
+        request.resource.data.keys().hasOnly([
+          'name', 'email', 'avatar', 'avatarName', 'plan', 'joinDate',
+          'favorites', 'watchlist', 'continueWatching', 'watchMinutes',
+          'badges', 'commentsPosted', 'accent', 'createdAt',
+        ]) &&
+        request.resource.data.name is string && request.resource.data.name.size() <= 30 &&
+        request.resource.data.email is string &&
+        request.resource.data.avatar is string &&
+        request.resource.data.avatarName is string &&
+        request.resource.data.plan == 'free' &&
+        request.resource.data.joinDate is string &&
+        request.resource.data.favorites is list && request.resource.data.favorites.size() <= 200 &&
+        request.resource.data.watchlist is list && request.resource.data.watchlist.size() <= 200 &&
+        request.resource.data.continueWatching is list && request.resource.data.continueWatching.size() <= 200 &&
+        request.resource.data.watchMinutes == 0 &&
+        request.resource.data.commentsPosted == 0 &&
+        request.resource.data.badges is list && request.resource.data.badges.size() == 0 &&
+        request.resource.data.accent is string &&
+        request.resource.data.createdAt is timestamp;
+
+      // Users may only change their own profile fields. Privilege/vanity fields
+      // (plan/joinDate/watchMinutes/badges/commentsPosted) are type- and
+      // range-checked when touched so clients can't forge stats.
+      allow update: if request.auth != null && request.auth.uid == userId &&
+        request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['name', 'avatar', 'avatarName', 'accent', 'favorites', 'watchlist',
+            'continueWatching', 'watchMinutes', 'commentsPosted', 'badges']) &&
+        (!('watchMinutes' in request.resource.data) ||
+          (request.resource.data.watchMinutes is number &&
+            request.resource.data.watchMinutes >= 0 && request.resource.data.watchMinutes <= 1000000)) &&
+        (!('commentsPosted' in request.resource.data) ||
+          (request.resource.data.commentsPosted is int &&
+            request.resource.data.commentsPosted >= 0 && request.resource.data.commentsPosted <= 100000)) &&
+        (!('badges' in request.resource.data) ||
+          (request.resource.data.badges is list && request.resource.data.badges.size() <= 20)) &&
+        (!('favorites' in request.resource.data) || request.resource.data.favorites is list) &&
+        (!('watchlist' in request.resource.data) || request.resource.data.watchlist is list) &&
+        (!('continueWatching' in request.resource.data) || request.resource.data.continueWatching is list);
       allow delete: if false;
 
       match /notifications/{notifId} {
         allow read: if request.auth != null && request.auth.uid == userId;
-        allow create: if request.auth != null && request.auth.uid == userId;
-        allow update: if request.auth != null && request.auth.uid == userId;
+        // Owners can write their own notifications; anyone signed in may deliver
+        // a strictly-shaped "reply" notification to a comment's author.
+        allow create: if request.auth != null &&
+          (request.auth.uid == userId ||
+            (request.resource.data.keys().hasOnly([
+              'title', 'body', 'type', 'animeId', 'episode', 'sender',
+              'senderAvatar', 'commentId', 'read', 'createdAt',
+            ]) &&
+            request.resource.data.type == 'reply' &&
+            request.resource.data.read == false &&
+            request.resource.data.title is string &&
+            request.resource.data.title.size() <= 200 &&
+            request.resource.data.body is string &&
+            request.resource.data.body.size() <= 200 &&
+            request.resource.data.sender is string &&
+            request.resource.data.sender.size() <= 30 &&
+            request.resource.data.senderAvatar is string &&
+            request.resource.data.animeId is string &&
+            request.resource.data.episode is int &&
+            request.resource.data.commentId is string &&
+            request.resource.data.createdAt is timestamp));
+        allow update: if request.auth != null && request.auth.uid == userId &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']) &&
+          request.resource.data.read is bool;
         allow delete: if request.auth != null && request.auth.uid == userId;
       }
     }

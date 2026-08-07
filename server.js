@@ -17,6 +17,14 @@ app.use(cors())
 // rate limits keyed to real client IPs instead of the proxy's address.
 app.set('trust proxy', 1)
 
+// Basic security headers (the client is a SPA, so no CSP inline policies here).
+app.use((req, res, next) => {
+  res.set('X-Content-Type-Options', 'nosniff')
+  res.set('X-Frame-Options', 'DENY')
+  res.set('Referrer-Policy', 'strict-origin-when-cross-origin')
+  next()
+})
+
 // ── Rate limiting ─────────────────────────────────────────────
 // Limits are tunable via env (e.g. RATE_LIMIT_GLOBAL) so they can be adjusted
 // on Render without a code change.

@@ -3,6 +3,7 @@ import * as manga from '../services/mangaService.js'
 import * as adaptation from '../services/adaptationService.js'
 import * as resolver from '../services/adaptationResolver.js'
 import { cache } from '../cache/memoryCache.js'
+import { verifyFirebaseToken, bearerToken, aiResolverQuotaExceeded } from '../utils/firebaseAuth.js'
 
 const router = Router()
 
@@ -11,15 +12,34 @@ const router = Router()
 // Failures are cached for an hour; successes live in the persistent store.
 const RESOLVER_CACHE = cache('manga:adaptation:resolver', { ttlMs: 60 * 60 * 1000, maxEntries: 200 })
 
-async function resolveForRequest(animeId, episode) {
+// The AI resolver only runs for authenticated users under a per-user daily
+// budget, so anonymous visitors can't drain OpenAI credits. The quota is
+// counted inside the cached() callback, i.e. only on an actual LLM attempt
+// (cache hits for the same input don't consume the budget).
+async function resolveForRequest(animeId, episode, uid) {
   if (!resolver.resolverEnabled()) return null
   const key = `${animeId}:${episode}`
-  return RESOLVER_CACHE.cached(key, () => resolver.resolveAdaptation(animeId, episode))
+  return RESOLVER_CACHE.cached(key, async () => {
+    if (aiResolverQuotaExceeded(uid)) {
+      const err = new Error('daily AI resolver quota exceeded')
+      err.code = 'AI_QUOTA'
+      throw err
+    }
+    return resolver.resolveAdaptation(animeId, episode)
+  })
 }
 
 // All /api/manga/* routes go through the service layer, which wraps the
 // Provider Manager with caching + single-flight. The frontend only ever sees
 // normalized shapes and opaque ids like "mangadex:<uuid>" / "allmanga:<ref>".
+
+// Pagination is clamped so a client can't trigger oversized upstream fetches.
+const clampInt = (v, min, max, dflt) => {
+  const n = Number(v)
+  return Number.isFinite(n) ? Math.min(Math.max(Math.floor(n), min), max) : dflt
+}
+const LIMIT = (v) => clampInt(v, 1, 100, 20)
+const OFFSET = (v) => clampInt(v, 0, 10000, 0)
 
 router.get('/lookup', async (req, res) => {
   try {
@@ -40,7 +60,7 @@ router.get('/search', async (req, res) => {
   try {
     const { q, limit = 20, offset = 0 } = req.query
     if (!q) return res.status(400).json({ error: 'q is required' })
-    const { data, total, provider } = await manga.search(q, Number(limit), Number(offset))
+    const { data, total, provider } = await manga.search(q, LIMIT(limit), OFFSET(offset))
     res.json({ data, total, provider })
   } catch (err) {
     console.error('[manga] search error:', err.message)
@@ -51,7 +71,7 @@ router.get('/search', async (req, res) => {
 router.get('/trending', async (req, res) => {
   try {
     const { limit = 20, offset = 0 } = req.query
-    const { data, total, provider } = await manga.trending(Number(limit), Number(offset))
+    const { data, total, provider } = await manga.trending(LIMIT(limit), OFFSET(offset))
     res.json({ data, total, provider })
   } catch (err) {
     console.error('[manga] trending error:', err.message)
@@ -62,7 +82,7 @@ router.get('/trending', async (req, res) => {
 router.get('/latest', async (req, res) => {
   try {
     const { limit = 20, offset = 0 } = req.query
-    const { data, total, provider } = await manga.latest(Number(limit), Number(offset))
+    const { data, total, provider } = await manga.latest(LIMIT(limit), OFFSET(offset))
     res.json({ data, total, provider })
   } catch (err) {
     console.error('[manga] latest error:', err.message)
@@ -105,7 +125,7 @@ router.get('/chapter/:id', async (req, res) => {
 router.get('/:id/chapters', async (req, res) => {
   try {
     const { lang = 'en', limit = 100, offset = 0 } = req.query
-    const { data, total, provider } = await manga.chapters(req.params.id, lang, Number(limit), Number(offset))
+    const { data, total, provider } = await manga.chapters(req.params.id, lang, LIMIT(limit), OFFSET(offset))
     console.log(`[manga] chapters | mangaId=${req.params.id} | provider=${provider} | total=${total} | returned=${data.length}`)
     res.json({ data, total, provider })
   } catch (err) {
@@ -122,6 +142,9 @@ router.get('/adaptation', async (req, res) => {
     if (animeId == null || episode == null) {
       return res.status(400).json({ error: 'animeId and episode are required' })
     }
+    if (!/^\d{1,9}$/.test(String(animeId)) || !/^\d{1,9}$/.test(String(episode))) {
+      return res.status(400).json({ error: 'invalid animeId or episode' })
+    }
     const { result, notFound, source } = adaptation.getAdaptation(animeId, episode)
     if (!notFound) {
       console.log(
@@ -130,11 +153,31 @@ router.get('/adaptation', async (req, res) => {
       return res.json({ ...result, source: source || 'map' })
     }
 
-    // Map + store both missed: fall through to the AI resolver (only if a key
-    // is configured). A high-confidence answer is saved to the store, so the
-    // next request hits the cache; anything else is refused rather than
-    // guessing.
-    const outcome = await resolveForRequest(animeId, episode)
+    // Map + store both missed: fall through to the AI resolver only if a key is
+    // configured AND the caller is signed in (under a per-user daily budget),
+    // to stop anonymous visitors from draining OpenAI credits. A high-confidence
+    // answer is saved to the store, so the next request hits the cache;
+    // anything else is refused rather than guessing.
+    if (!resolver.resolverEnabled()) {
+      console.log(`[manga] adaptation | animeId=${animeId} | episode=${episode} | ${notFound}`)
+      return res.status(404).json({ error: notFound === 'unknown-anime' ? 'Unknown animeId' : 'Episode not in adaptation map' })
+    }
+
+    const uid = await verifyFirebaseToken(bearerToken(req))
+    if (!uid) {
+      return res.status(401).json({ error: 'auth-required', message: 'Sign in to get AI-powered adaptation suggestions.' })
+    }
+
+    let outcome
+    try {
+      outcome = await resolveForRequest(animeId, episode, uid)
+    } catch (err) {
+      if (err.code === 'AI_QUOTA') {
+        return res.status(429).json({ error: 'ai-quota', message: 'Daily AI adaptation limit reached. Try again tomorrow.' })
+      }
+      throw err
+    }
+
     if (outcome?.ok) {
       adaptation.saveAdaptation(animeId, episode, {
         nextChapter: outcome.result.nextChapter,
