@@ -276,3 +276,19 @@ body {
   0% { opacity: 0; transform: translateY(20px); }
   100% { opacity: 1; transform: translateY(0); }
 }
+
+/* Reader settings panel entrances */
+@keyframes readerSheetIn {
+  from { opacity: 0.6; transform: translateY(100%); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes readerFadeUp {
+  from { opacity: 0; transform: translateY(12px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes readerSideIn {
+  from { opacity: 0; transform: translateX(100%); }
+  to { opacity: 1; transform: translateX(0); }
+}
