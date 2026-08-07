@@ -1,6 +1,7 @@
 import 'dotenv/config'
 import express from 'express'
 import cors from 'cors'
+import rateLimit from 'express-rate-limit'
 import path from 'path'
 import { fileURLToPath } from 'url'
 import animeRoutes from './server/routes/anime.js'
@@ -12,6 +13,41 @@ import { summarize } from './server/utils/stats.js'
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const app = express()
 app.use(cors())
+// Render sits behind a proxy that sets X-Forwarded-For; trusting one hop keeps
+// rate limits keyed to real client IPs instead of the proxy's address.
+app.set('trust proxy', 1)
+
+// ── Rate limiting ─────────────────────────────────────────────
+// Limits are tunable via env (e.g. RATE_LIMIT_GLOBAL) so they can be adjusted
+// on Render without a code change.
+const int = (v, d) => { const n = parseInt(process.env[v], 10); return Number.isFinite(n) && n > 0 ? n : d }
+const MINUTE = 60 * 1000
+const RATE_LIMIT_MESSAGE = { error: 'Too many requests. Please slow down and try again.' }
+const limiterOpts = { windowMs: MINUTE, standardHeaders: 'draft-7', legacyHeaders: false, message: RATE_LIMIT_MESSAGE }
+
+// Global API guard (health checks are infrequent, so keep it generous).
+// Media segment passthrough is excluded here and limited separately so long
+// playback sessions don't trip the global window.
+const globalLimiter = rateLimit({
+  ...limiterOpts,
+  limit: int('RATE_LIMIT_GLOBAL', 1000),
+  skip: (req) => req.originalUrl.startsWith('/api/media/proxy'),
+})
+
+// LLM-backed resolver is expensive per call; tight per-IP budget.
+const adaptationLimiter = rateLimit({ ...limiterOpts, limit: int('RATE_LIMIT_ADAPTATION', 10) })
+
+// Provider stream resolution (per episode) — keep bursty seek/retry behavior sane.
+const streamLimiter = rateLimit({ ...limiterOpts, limit: int('RATE_LIMIT_STREAM', 60) })
+
+// m3u8 + segment passthrough: high volume by design (~10 req/min per stream),
+// so only cap runaway abuse.
+const mediaProxyLimiter = rateLimit({ ...limiterOpts, limit: int('RATE_LIMIT_MEDIA', 600) })
+
+app.use('/api', globalLimiter)
+app.use('/api/manga/adaptation', adaptationLimiter)
+app.use('/api/stream', streamLimiter)
+app.use('/api/media/proxy', mediaProxyLimiter)
 
 // ── Routers ────────────────────────────────────────────────────
 // anime  → /api/anidap/*, /api/stream/*, /api/anime/home

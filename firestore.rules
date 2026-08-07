@@ -2,6 +2,43 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function userProfile() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+
+    function validAuthorName(name) {
+      return name is string && name.size() > 0 && name.size() <= 30;
+    }
+
+    function validCommentText(text) {
+      return text is string && text.size() >= 2 && text.size() <= 500;
+    }
+
+    // Comments and replies must be posted by the signed-in author using their
+    // own profile identity, with a fixed, typed payload (no forged likes,
+    // pin flags, timestamps, or privileged fields).
+    function canCreateComment(allowedKeys) {
+      return isSignedIn() &&
+        request.auth.uid is string &&
+        request.resource.data.uid == request.auth.uid &&
+        request.resource.data.uid is string &&
+        userProfile().exists &&
+        request.resource.data.name == userProfile().data.name &&
+        validAuthorName(request.resource.data.name) &&
+        validCommentText(request.resource.data.text) &&
+        request.resource.data.avatar is string &&
+        request.resource.data.createdAt is timestamp &&
+        request.resource.data.likes == 0 &&
+        request.resource.data.dislikes == 0 &&
+        request.resource.data.likedBy.size() == 0 &&
+        request.resource.data.dislikedBy.size() == 0 &&
+        request.resource.data.keys().hasOnly(allowedKeys);
+    }
+
     match /users/{userId} {
       allow read: if request.auth != null && request.auth.uid == userId;
       allow create: if request.auth != null && request.auth.uid == userId;
@@ -19,17 +56,20 @@ service cloud.firestore {
     match /comments/{animeId}/episodes/{episode}/messages/{commentId} {
       allow read: if true;
 
-      allow create: if
-        request.resource.data.name is string &&
-        request.resource.data.name.size() > 0 &&
-        request.resource.data.name.size() <= 30 &&
-        request.resource.data.text is string &&
-        request.resource.data.text.size() >= 2 &&
-        request.resource.data.text.size() <= 500;
+      allow create: if canCreateComment([
+        'name', 'avatar', 'uid', 'text', 'createdAt', 'likes', 'dislikes',
+        'likedBy', 'dislikedBy', 'containsSpoiler', 'badges',
+        'animeId', 'episode', 'animeTitle', 'animeCover',
+      ]);
 
-      allow update: if
+      allow update: if request.auth != null &&
+        request.auth.uid is string &&
         request.resource.data.diff(resource.data).affectedKeys()
-          .hasOnly(['likes', 'dislikes', 'likedBy', 'dislikedBy', 'pinned', 'pinnedBy']);
+          .hasOnly(['likes', 'dislikes', 'likedBy', 'dislikedBy', 'pinned', 'pinnedBy']) &&
+        // Pin changes are owner-only; everyone else may only adjust likes.
+        (request.auth.uid == resource.data.uid ||
+          request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['likes', 'dislikes', 'likedBy', 'dislikedBy']));
 
       allow delete: if request.auth != null &&
         request.auth.uid == resource.data.uid;
@@ -37,15 +77,13 @@ service cloud.firestore {
       match /replies/{replyId} {
         allow read: if true;
 
-        allow create: if
-          request.resource.data.name is string &&
-          request.resource.data.name.size() > 0 &&
-          request.resource.data.name.size() <= 30 &&
-          request.resource.data.text is string &&
-          request.resource.data.text.size() >= 2 &&
-          request.resource.data.text.size() <= 500;
+        allow create: if canCreateComment([
+          'name', 'avatar', 'uid', 'text', 'createdAt', 'likes', 'dislikes',
+          'likedBy', 'dislikedBy', 'containsSpoiler', 'badges',
+        ]);
 
-        allow update: if
+        allow update: if request.auth != null &&
+          request.auth.uid is string &&
           request.resource.data.diff(resource.data).affectedKeys()
             .hasOnly(['likes', 'dislikes', 'likedBy', 'dislikedBy']);
 

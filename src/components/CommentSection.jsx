@@ -14,6 +14,12 @@ import { Link } from 'react-router-dom'
 
 const PLACEHOLDER_AVATAR = 'https://ui-avatars.com/api/?name=User&background=6d28d9&color=fff&size=96'
 
+// Client-side spam guard: comments and replies share a per-session cooldown.
+// Server enforcement is handled by firestore.rules (auth + field whitelist).
+const COMMENT_COOLDOWN_MS = 15_000
+let lastCommentAt = 0
+const remainingCooldownMs = () => Math.max(0, lastCommentAt + COMMENT_COOLDOWN_MS - Date.now())
+
 const EMOJI_CATEGORIES = {
   'Smileys': ['😀','😂','🤣','😊','😍','🥰','😘','😎','🤩','🥳','😏','😅','😉','😌','😴','🤗','🤭','🤫','🤔','😐','😑','😶','🙄','😬','😮‍💨','😔','😪','🤤','😷','🤒','🤕','🤢','🤮','🥵','🥶','🥴','😵','🤯','🤠','🥳','🥸','🤓','🧐'],
   'Reactions': ['❤️','🔥','💯','✨','⭐','🌟','💪','👏','🙌','👍','👎','✌️','🤝','🙏','💕','💖','💗','💜','💙','💚','🧡','🖤','🤍','💔','❣️','💞','💓','🎉','🎊','🏆','🥇','🎯','💥','💫','🌈'],
@@ -181,6 +187,8 @@ function CommentItem({ c, user, animeId, episode, onPin, pinnedId, hideSpoilers 
   const [replyText, setReplyText] = useState('')
   const [replySpoiler, setReplySpoiler] = useState(false)
   const [sendingReply, setSendingReply] = useState(false)
+  const [replyCooldownMs, setReplyCooldownMs] = useState(0)
+  const [replyError, setReplyError] = useState('')
   const [replies, setReplies] = useState([])
   const [repliesLoaded, setRepliesLoaded] = useState(false)
   const [showMore, setShowMore] = useState(false)
@@ -250,25 +258,36 @@ function CommentItem({ c, user, animeId, episode, onPin, pinnedId, hideSpoilers 
     e.preventDefault()
     const trimmed = replyText.trim()
     if (!trimmed || !user) return
-    setSendingReply(true)
-    await addDoc(collection(db, episodePath), {
-      name: user.name, avatar: user.avatar || '', uid: user.uid,
-      text: trimmed, createdAt: serverTimestamp(),
-      likes: 0, dislikes: 0, likedBy: {}, dislikedBy: {},
-      containsSpoiler: replySpoiler, badges: user.badges || [],
-    })
-    if (c.uid && c.uid !== user.uid) {
-      await addDoc(collection(db, 'users', c.uid, 'notifications'), {
-        title: `${user.name} replied to your comment`,
-        body: trimmed.slice(0, 100),
-        type: 'reply', animeId: String(animeId), episode: Number(episode),
-        sender: user.name, senderAvatar: user.avatar || '',
-        commentId: c.id, read: false, createdAt: serverTimestamp(),
-      })
+    const waitMs = remainingCooldownMs()
+    if (waitMs > 0) {
+      setReplyCooldownMs(waitMs)
+      return
     }
-    setReplyText('')
-    setReplySpoiler(false)
-    setShowReplies(true)
+    setSendingReply(true)
+    setReplyError('')
+    try {
+      await addDoc(collection(db, episodePath), {
+        name: user.name, avatar: user.avatar || '', uid: user.uid,
+        text: trimmed, createdAt: serverTimestamp(),
+        likes: 0, dislikes: 0, likedBy: {}, dislikedBy: {},
+        containsSpoiler: replySpoiler, badges: user.badges || [],
+      })
+      lastCommentAt = Date.now()
+      if (c.uid && c.uid !== user.uid) {
+        await addDoc(collection(db, 'users', c.uid, 'notifications'), {
+          title: `${user.name} replied to your comment`,
+          body: trimmed.slice(0, 100),
+          type: 'reply', animeId: String(animeId), episode: Number(episode),
+          sender: user.name, senderAvatar: user.avatar || '',
+          commentId: c.id, read: false, createdAt: serverTimestamp(),
+        })
+      }
+      setReplyText('')
+      setReplySpoiler(false)
+      setShowReplies(true)
+    } catch {
+      setReplyError("Couldn't post your reply. Please try again.")
+    }
     setSendingReply(false)
   }
 
@@ -371,6 +390,12 @@ function CommentItem({ c, user, animeId, episode, onPin, pinnedId, hideSpoilers 
                   {sendingReply ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
                 </button>
               </form>
+              {replyCooldownMs > 0 && (
+                <p className="text-[11px] text-yellow-400 mt-1.5">Please wait {Math.ceil(replyCooldownMs / 1000)}s before posting again.</p>
+              )}
+              {replyError && (
+                <p className="text-[11px] text-red-400 mt-1.5">{replyError}</p>
+              )}
             </div>
           )}
         </div>
@@ -383,9 +408,10 @@ export default function CommentSection({ animeId, episode, animeTitle, animeCove
   const { user, addNotification } = useAuth()
   const [comments, setComments] = useState([])
   const [loading, setLoading] = useState(true)
-  const [name, setName] = useState(() => localStorage.getItem('comment_name') || '')
   const [text, setText] = useState('')
   const [sending, setSending] = useState(false)
+  const [cooldownMs, setCooldownMs] = useState(0)
+  const [postError, setPostError] = useState('')
   const [showEmoji, setShowEmoji] = useState(false)
   const [containsSpoiler, setContainsSpoiler] = useState(false)
   const [pinnedId, setPinnedId] = useState(null)
@@ -442,40 +468,45 @@ export default function CommentSection({ animeId, episode, animeTitle, animeCove
     e.preventDefault()
     const trimmedText = text.trim()
     if (!trimmedText || trimmedText.length < 2 || trimmedText.length > 500) return
-    const displayName = user?.name || name.trim()
-    if (!displayName) return
+    if (!user?.name) return
+    const waitMs = remainingCooldownMs()
+    if (waitMs > 0) {
+      setCooldownMs(waitMs)
+      return
+    }
 
     setSending(true)
+    setPostError('')
     try {
       await addDoc(messagesRef, {
-        name: displayName.slice(0, 30), avatar: user?.avatar || '',
-        uid: user?.uid || '', text: trimmedText, createdAt: serverTimestamp(),
+        name: user.name, avatar: user.avatar || '',
+        uid: user.uid, text: trimmedText, createdAt: serverTimestamp(),
         likes: 0, dislikes: 0, likedBy: {}, dislikedBy: {},
-        pinned: false, pinnedBy: null, containsSpoiler,
-        badges: user?.badges || [],
+        containsSpoiler,
+        badges: user.badges || [],
         animeId: String(animeId), episode: Number(episode),
         animeTitle: animeTitle || '', animeCover: animeCover || '',
       })
-      if (!user) localStorage.setItem('comment_name', displayName)
+      lastCommentAt = Date.now()
       setText('')
       setContainsSpoiler(false)
-      if (user) {
-        const userSnap = await getDoc(doc(db, 'users', user.uid))
-        if (userSnap.exists()) {
-          const ud = userSnap.data()
-          const commentsPosted = (ud.commentsPosted || 0) + 1
-          await updateDoc(doc(db, 'users', user.uid), { commentsPosted })
-          const { earned, newBadges } = checkBadges({ ...ud, commentsPosted }, { commentsPosted })
-          if (newBadges.length > 0) {
-            await updateDoc(doc(db, 'users', user.uid), { badges: earned })
-            for (const badgeId of newBadges) {
-              const b = BADGES[badgeId]
-              if (b) await addNotification(`Badge Unlocked: ${b.name} ${b.icon}`, b.description, 'badge', '/profile')
-            }
+      const userSnap = await getDoc(doc(db, 'users', user.uid))
+      if (userSnap.exists()) {
+        const ud = userSnap.data()
+        const commentsPosted = (ud.commentsPosted || 0) + 1
+        await updateDoc(doc(db, 'users', user.uid), { commentsPosted })
+        const { earned, newBadges } = checkBadges({ ...ud, commentsPosted }, { commentsPosted })
+        if (newBadges.length > 0) {
+          await updateDoc(doc(db, 'users', user.uid), { badges: earned })
+          for (const badgeId of newBadges) {
+            const b = BADGES[badgeId]
+            if (b) await addNotification(`Badge Unlocked: ${b.name} ${b.icon}`, b.description, 'badge', '/profile')
           }
         }
       }
-    } catch { /* silent */ }
+    } catch {
+      setPostError("Couldn't post your comment. Please try again.")
+    }
     setSending(false)
   }
 
@@ -497,44 +528,53 @@ export default function CommentSection({ animeId, episode, animeTitle, animeCove
         </h3>
       </div>
 
-      <form onSubmit={handleSubmit} className="mb-6 flex flex-col gap-3">
-        {!user && (
-          <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="Your name" maxLength={30}
-            className="w-full sm:w-64 px-4 py-2.5 bg-white/5 border border-white/10 rounded-xl text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary/50" />
-        )}
-        <div className="flex gap-3 items-start">
-          {user && <img src={user.avatar || PLACEHOLDER_AVATAR} alt="" onError={(e) => { e.target.src = PLACEHOLDER_AVATAR }} className="w-9 h-9 rounded-full border border-white/10 shadow-md object-cover shrink-0 mt-0.5" />}
-          <div className="flex-1 flex flex-col gap-2">
-            {user && (
+      {!user ? (
+        <div className="mb-6 flex items-center gap-3 rounded-xl border border-white/10 bg-white/[0.02] px-4 py-4">
+          <MessageCircle className="w-5 h-5 text-gray-500 shrink-0" />
+          <p className="text-sm text-gray-400">
+            <Link to="/login" className="text-primary-light hover:underline font-medium">Log in</Link> to join the discussion.
+          </p>
+        </div>
+      ) : (
+        <form onSubmit={handleSubmit} className="mb-6 flex flex-col gap-3">
+          <div className="flex gap-3 items-start">
+            <img src={user.avatar || PLACEHOLDER_AVATAR} alt="" onError={(e) => { e.target.src = PLACEHOLDER_AVATAR }} className="w-9 h-9 rounded-full border border-white/10 shadow-md object-cover shrink-0 mt-0.5" />
+            <div className="flex-1 flex flex-col gap-2">
               <div className="flex items-center gap-1">
                 <span className="text-sm font-medium text-white">{user.name}</span>
                 <BadgeDisplay badgeIds={user.badges} />
               </div>
-            )}
-            <div className="flex gap-2 items-center">
-              <input ref={inputRef} type="text" value={text} onChange={(e) => setText(e.target.value)} placeholder="Write a comment..." maxLength={500}
-                className="flex-1 px-4 py-2.5 bg-white/5 border border-white/10 rounded-xl text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary/50" />
-              <div className="relative">
-                <button type="button" onClick={() => setShowEmoji(!showEmoji)} className={`p-2.5 rounded-xl transition-colors ${showEmoji ? 'bg-primary/20 text-primary-light' : 'text-gray-400 hover:text-white hover:bg-white/5'}`} title="Emoji">
-                  <SmilePlus className="w-5 h-5" />
+              <div className="flex gap-2 items-center">
+                <input ref={inputRef} type="text" value={text} onChange={(e) => setText(e.target.value)} placeholder="Write a comment..." maxLength={500}
+                  className="flex-1 px-4 py-2.5 bg-white/5 border border-white/10 rounded-xl text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary/50" />
+                <div className="relative">
+                  <button type="button" onClick={() => setShowEmoji(!showEmoji)} className={`p-2.5 rounded-xl transition-colors ${showEmoji ? 'bg-primary/20 text-primary-light' : 'text-gray-400 hover:text-white hover:bg-white/5'}`} title="Emoji">
+                    <SmilePlus className="w-5 h-5" />
+                  </button>
+                  {showEmoji && <EmojiPicker onSelect={insertEmoji} onClose={() => setShowEmoji(false)} />}
+                </div>
+                <button type="button" onClick={() => setContainsSpoiler(!containsSpoiler)} className={`p-2.5 rounded-xl transition-colors ${containsSpoiler ? 'bg-yellow-500/20 text-yellow-400' : 'text-gray-400 hover:text-white hover:bg-white/5'}`} title="Contains spoilers">
+                  <AlertTriangle className="w-5 h-5" />
                 </button>
-                {showEmoji && <EmojiPicker onSelect={insertEmoji} onClose={() => setShowEmoji(false)} />}
+                <button type="submit" disabled={sending || text.trim().length < 2}
+                  className="px-4 py-2.5 bg-primary hover:bg-primary-dark disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-xl transition-colors flex items-center gap-2">
+                  {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                </button>
               </div>
-              <button type="button" onClick={() => setContainsSpoiler(!containsSpoiler)} className={`p-2.5 rounded-xl transition-colors ${containsSpoiler ? 'bg-yellow-500/20 text-yellow-400' : 'text-gray-400 hover:text-white hover:bg-white/5'}`} title="Contains spoilers">
-                <AlertTriangle className="w-5 h-5" />
-              </button>
-              <button type="submit" disabled={sending || text.trim().length < 2 || (!user && !name.trim())}
-                className="px-4 py-2.5 bg-primary hover:bg-primary-dark disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-xl transition-colors flex items-center gap-2">
-                {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-              </button>
             </div>
           </div>
-        </div>
-        <div className="flex items-center justify-between">
-          <p className="text-[11px] text-gray-600">{text.length}/500</p>
-          {containsSpoiler && <p className="text-[11px] text-yellow-500 flex items-center gap-1"><AlertTriangle className="w-3 h-3" /> Marked as spoiler</p>}
-        </div>
-      </form>
+          <div className="flex items-center justify-between">
+            <p className="text-[11px] text-gray-600">{text.length}/500</p>
+            {containsSpoiler && <p className="text-[11px] text-yellow-500 flex items-center gap-1"><AlertTriangle className="w-3 h-3" /> Marked as spoiler</p>}
+          </div>
+          {cooldownMs > 0 && (
+            <p className="text-[11px] text-yellow-400">Please wait {Math.ceil(cooldownMs / 1000)}s before posting again.</p>
+          )}
+          {postError && (
+            <p className="text-[11px] text-red-400">{postError}</p>
+          )}
+        </form>
+      )}
 
       {loading ? (
         <div className="flex justify-center py-8"><Loader2 className="w-6 h-6 text-gray-500 animate-spin" /></div>
