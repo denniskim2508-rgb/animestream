@@ -10,16 +10,19 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
+import * as store from './adaptationStore.js'
 
 const MAPS_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'cache', 'maps')
 
 // anilistId → cached map file. Add future franchises here (one-piece, bleach,
 // jjk, demon-slayer, ...) once their wiki data is scraped into server/cache/maps/.
+// `annId` (ANN encyclopedia id) and `episodeCount` are metadata validated
+// against Anime News Network by server/scrapers/annCheck.js.
 const SERIES = [
-  { key: 'naruto', title: 'Naruto', anilistId: 20, file: 'naruto.json' },
-  { key: 'naruto-shippuden', title: 'Naruto Shippuden', anilistId: 1735, file: 'naruto-shippuden.json' },
-  { key: 'wind-breaker-s1', title: 'Wind Breaker (Season 1)', anilistId: 163270, file: 'wind-breaker-s1.json' },
-  { key: 'wind-breaker-s2', title: 'Wind Breaker (Season 2)', anilistId: 178680, file: 'wind-breaker-s2.json' },
+  { key: 'naruto', title: 'Naruto', anilistId: 20, file: 'naruto.json', annId: 1825, episodeCount: 220 },
+  { key: 'naruto-shippuden', title: 'Naruto Shippuden', anilistId: 1735, file: 'naruto-shippuden.json', annId: 7293, episodeCount: 500 },
+  { key: 'wind-breaker-s1', title: 'Wind Breaker (Season 1)', anilistId: 163270, file: 'wind-breaker-s1.json', annId: 27706, episodeCount: 13 },
+  { key: 'wind-breaker-s2', title: 'Wind Breaker (Season 2)', anilistId: 178680, file: 'wind-breaker-s2.json', annId: 32849, episodeCount: 12 },
 ]
 
 const loaded = new Map()
@@ -39,6 +42,35 @@ export function isKnownAnime(animeId) {
   return SERIES.some((s) => s.anilistId === Number(animeId))
 }
 
+export function listSeries() {
+  return SERIES.map((s) => ({ ...s }))
+}
+
+// Save a resolved adaptation to the persistent store so every future request
+// for the same anime+episode returns it without re-resolving. Used by the
+// on-demand resolver / CLI (server/scrapers/seedAdaptation.js) and by any
+// future LLM fallback path.
+export function saveAdaptation(animeId, episode, fields = {}) {
+  const anilistId = Number(animeId)
+  const epNum = Number(episode)
+  if (!Number.isInteger(anilistId) || !Number.isInteger(epNum) || epNum < 1) {
+    throw new Error('animeId and episode (positive integer) are required')
+  }
+  const series = SERIES.find((s) => s.anilistId === anilistId)
+  const result = {
+    animeId: anilistId,
+    episode: epNum,
+    series: series?.key || null,
+    animeTitle: series?.title || fields.animeTitle || String(anilistId),
+    lastAdaptedChapter: fields.lastAdaptedChapter ?? null,
+    nextChapter: fields.nextChapter ?? null,
+    filler: Boolean(fields.filler),
+    previousCanonEpisode: fields.previousCanonEpisode ?? null,
+    source: fields.source || 'manual',
+  }
+  return store.setAdaptation(anilistId, epNum, result)
+}
+
 function previousCanonEpisode(episodes, episode) {
   for (let n = episode - 1; n >= 1; n--) {
     const e = episodes[String(n)]
@@ -48,28 +80,39 @@ function previousCanonEpisode(episodes, episode) {
 }
 
 // Resolve the next chapter to read after `episode` of `animeId`.
+// Priority: static map (authoritative for scraped series) → persistent store
+// (on-demand / saved results) → notFound.
 // Returns { result } on success or { notFound: 'unknown-anime'|'unknown-episode' }.
 export function getAdaptation(animeId, episode) {
   const series = SERIES.find((s) => s.anilistId === Number(animeId))
-  if (!series) return { notFound: 'unknown-anime' }
-
-  const data = loadMap(series.file)
-  const epNum = Number(episode)
-  if (!Number.isInteger(epNum) || epNum < 1) return { notFound: 'unknown-episode' }
-  const entry = data.episodes[String(epNum)]
-  if (!entry) return { notFound: 'unknown-episode' }
-
-  const result = {
-    animeId: series.anilistId,
-    series: series.key,
-    animeTitle: series.title,
-    episode: epNum,
-    lastAdaptedChapter: entry.filler ? null : entry.lastChapter,
-    nextChapter: entry.nextChapter,
-    filler: entry.filler,
+  if (series) {
+    const data = loadMap(series.file)
+    const epNum = Number(episode)
+    if (Number.isInteger(epNum) && epNum >= 1) {
+      const entry = data.episodes[String(epNum)]
+      if (entry) {
+        const result = {
+          animeId: series.anilistId,
+          series: series.key,
+          animeTitle: series.title,
+          episode: epNum,
+          lastAdaptedChapter: entry.filler ? null : entry.lastChapter,
+          nextChapter: entry.nextChapter,
+          filler: entry.filler,
+        }
+        if (entry.filler) {
+          result.previousCanonEpisode = previousCanonEpisode(data.episodes, epNum)
+        }
+        return { result }
+      }
+    }
   }
-  if (entry.filler) {
-    result.previousCanonEpisode = previousCanonEpisode(data.episodes, epNum)
-  }
-  return { result }
+
+  // Fall through to the persistent store: an anime not covered by a map may
+  // still have a saved on-demand result, and a known anime may have a saved
+  // override for an episode missing from its map (e.g. a recap special).
+  const saved = store.getAdaptation(animeId, episode)
+  if (saved) return { result: saved, source: 'store' }
+
+  return { notFound: series ? 'unknown-episode' : 'unknown-anime' }
 }

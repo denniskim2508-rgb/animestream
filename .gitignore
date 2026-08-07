@@ -39,3 +39,6 @@ test_*.mjs
 
 # Runtime provider memory (which provider serves each manga)
 server/providers/.provider-prefs.json
+
+# Runtime adaptation cache (saved on-demand episode→chapter results)
+server/cache/adaptations.json

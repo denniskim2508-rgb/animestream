@@ -1,8 +1,21 @@
 import { Router } from 'express'
 import * as manga from '../services/mangaService.js'
 import * as adaptation from '../services/adaptationService.js'
+import * as resolver from '../services/adaptationResolver.js'
+import { cache } from '../cache/memoryCache.js'
 
 const router = Router()
+
+// Memoize resolver outcomes so a cache miss is attempted once and the verdict
+// (saved or "couldn't determine") is reused instead of re-running the LLM.
+// Failures are cached for an hour; successes live in the persistent store.
+const RESOLVER_CACHE = cache('manga:adaptation:resolver', { ttlMs: 60 * 60 * 1000, maxEntries: 200 })
+
+async function resolveForRequest(animeId, episode) {
+  if (!resolver.resolverEnabled()) return null
+  const key = `${animeId}:${episode}`
+  return RESOLVER_CACHE.cached(key, () => resolver.resolveAdaptation(animeId, episode))
+}
 
 // All /api/manga/* routes go through the service layer, which wraps the
 // Provider Manager with caching + single-flight. The frontend only ever sees
@@ -109,15 +122,40 @@ router.get('/adaptation', async (req, res) => {
     if (animeId == null || episode == null) {
       return res.status(400).json({ error: 'animeId and episode are required' })
     }
-    const { result, notFound } = adaptation.getAdaptation(animeId, episode)
-    if (notFound) {
-      console.log(`[manga] adaptation | animeId=${animeId} | episode=${episode} | ${notFound}`)
-      return res.status(404).json({ error: notFound === 'unknown-anime' ? 'Unknown animeId' : 'Episode not in adaptation map' })
+    const { result, notFound, source } = adaptation.getAdaptation(animeId, episode)
+    if (!notFound) {
+      console.log(
+        `[manga] adaptation | animeId=${result.animeId} | episode=${result.episode} | series=${result.series} | filler=${result.filler} | lastAdaptedChapter=${result.lastAdaptedChapter ?? '-'} | nextChapter=${result.nextChapter} | source=${source || 'map'}`
+      )
+      return res.json({ ...result, source: source || 'map' })
     }
-    console.log(
-      `[manga] adaptation | animeId=${result.animeId} | episode=${result.episode} | series=${result.series} | filler=${result.filler} | lastAdaptedChapter=${result.lastAdaptedChapter ?? '-'} | nextChapter=${result.nextChapter}`
-    )
-    res.json(result)
+
+    // Map + store both missed: fall through to the AI resolver (only if a key
+    // is configured). A high-confidence answer is saved to the store, so the
+    // next request hits the cache; anything else is refused rather than
+    // guessing.
+    const outcome = await resolveForRequest(animeId, episode)
+    if (outcome?.ok) {
+      adaptation.saveAdaptation(animeId, episode, {
+        nextChapter: outcome.result.nextChapter,
+        lastAdaptedChapter: outcome.result.lastAdaptedChapter,
+        filler: outcome.result.filler,
+        animeTitle: outcome.result.animeTitle,
+        source: `ai:${outcome.confidence}`,
+      })
+      console.log(
+        `[manga] adaptation | animeId=${animeId} | episode=${episode} | saved via AI resolver (confidence=${outcome.confidence}, nextChapter=${outcome.result.nextChapter ?? 'none'})`
+      )
+      return res.json({ ...outcome.result, source: 'store' })
+    }
+
+    if (outcome) {
+      console.log(`[manga] adaptation | animeId=${animeId} | episode=${episode} | ${outcome.message} (confidence=${outcome.confidence ?? 'n/a'})`)
+      return res.status(404).json({ error: 'unknown-anime', message: outcome.message })
+    }
+
+    console.log(`[manga] adaptation | animeId=${animeId} | episode=${episode} | ${notFound}`)
+    return res.status(404).json({ error: notFound === 'unknown-anime' ? 'Unknown animeId' : 'Episode not in adaptation map' })
   } catch (err) {
     console.error('[manga] adaptation error:', err.message)
     res.status(502).json({ error: 'Failed to resolve adaptation' })
