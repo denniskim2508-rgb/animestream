@@ -50,6 +50,7 @@ service cloud.firestore {
           'name', 'email', 'avatar', 'avatarName', 'plan', 'joinDate',
           'favorites', 'watchlist', 'continueWatching', 'watchMinutes',
           'badges', 'commentsPosted', 'accent', 'createdAt',
+          'preferredAudio', 'dubWatchCount', 'subWatchCount',
         ]) &&
         request.resource.data.name is string && request.resource.data.name.size() <= 30 &&
         request.resource.data.email is string &&
@@ -64,6 +65,10 @@ service cloud.firestore {
         request.resource.data.commentsPosted == 0 &&
         request.resource.data.badges is list && request.resource.data.badges.size() == 0 &&
         request.resource.data.accent is string &&
+        request.resource.data.preferredAudio is string &&
+        (request.resource.data.preferredAudio == 'sub' || request.resource.data.preferredAudio == 'dub') &&
+        request.resource.data.dubWatchCount == 0 &&
+        request.resource.data.subWatchCount == 0 &&
         request.resource.data.createdAt is timestamp;
 
       // Users may only change their own profile fields. Privilege/vanity fields
@@ -72,7 +77,8 @@ service cloud.firestore {
       allow update: if request.auth != null && request.auth.uid == userId &&
         request.resource.data.diff(resource.data).affectedKeys()
           .hasOnly(['name', 'avatar', 'avatarName', 'accent', 'favorites', 'watchlist',
-            'continueWatching', 'watchMinutes', 'commentsPosted', 'badges']) &&
+            'continueWatching', 'watchMinutes', 'commentsPosted', 'badges',
+            'preferredAudio', 'dubWatchCount', 'subWatchCount']) &&
         (!('watchMinutes' in request.resource.data) ||
           (request.resource.data.watchMinutes is number &&
             request.resource.data.watchMinutes >= 0 && request.resource.data.watchMinutes <= 1000000)) &&
@@ -83,7 +89,16 @@ service cloud.firestore {
           (request.resource.data.badges is list && request.resource.data.badges.size() <= 20)) &&
         (!('favorites' in request.resource.data) || request.resource.data.favorites is list) &&
         (!('watchlist' in request.resource.data) || request.resource.data.watchlist is list) &&
-        (!('continueWatching' in request.resource.data) || request.resource.data.continueWatching is list);
+        (!('continueWatching' in request.resource.data) || request.resource.data.continueWatching is list) &&
+        (!('preferredAudio' in request.resource.data) ||
+          (request.resource.data.preferredAudio is string &&
+            (request.resource.data.preferredAudio == 'sub' || request.resource.data.preferredAudio == 'dub'))) &&
+        (!('dubWatchCount' in request.resource.data) ||
+          (request.resource.data.dubWatchCount is int &&
+            request.resource.data.dubWatchCount >= 0 && request.resource.data.dubWatchCount <= 1000000)) &&
+        (!('subWatchCount' in request.resource.data) ||
+          (request.resource.data.subWatchCount is int &&
+            request.resource.data.subWatchCount >= 0 && request.resource.data.subWatchCount <= 1000000));
       allow delete: if false;
 
       match /notifications/{notifId} {

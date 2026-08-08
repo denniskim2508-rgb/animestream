@@ -1,13 +1,14 @@
 import { useParams, Link, useSearchParams, useNavigate } from 'react-router-dom'
 import { useState, useEffect, useRef, useCallback } from 'react'
 import Hls from 'hls.js'
-import { ChevronLeft, Play, Pause, List, SkipForward, SkipBack, AlertCircle, Loader2, RefreshCw, Tv, Volume2, VolumeX, RotateCcw, Maximize, Minimize, Search, Check, BookOpen } from 'lucide-react'
+import { ChevronLeft, Play, Pause, List, SkipForward, SkipBack, AlertCircle, Loader2, RefreshCw, Tv, Volume2, VolumeX, RotateCcw, Maximize, Minimize, Search, Check, BookOpen, Settings } from 'lucide-react'
 import { fetchMediaById } from '../api/anilist'
-import { resolveStream, getServers, getSources, fetchEpisodeAvailability } from '../api/anikoto'
+import { resolveStream, fetchEpisodeAvailability } from '../api/anikoto'
 import { useAuth } from '../context/AuthContext'
 import CommentSection from '../components/CommentSection'
 import NextEpisodeOverlay from '../components/ui/NextEpisodeOverlay'
 import { findMangaForAnime } from '../api/crosslink'
+import { loadVideoSettings, saveVideoSetting, loadAudioPreference } from '../utils/videoSettings'
 
 function encodeHeaders(headers) {
   return btoa(JSON.stringify(headers)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '')
@@ -21,7 +22,7 @@ export default function VideoPlayer() {
   const { animeId, episode } = useParams()
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
-  const audioMode = searchParams.get('audio') || 'sub'
+  const audioMode = searchParams.get('audio') || user?.preferredAudio || loadAudioPreference() || 'sub'
   const currentEp = Number(episode) || 1
   const [totalEpisodes, setTotalEpisodes] = useState(() => Number(searchParams.get('total')) || 0)
 
@@ -40,7 +41,7 @@ export default function VideoPlayer() {
   const [cdnHeaders, setCdnHeaders] = useState({})
   const [hasSub, setHasSub] = useState(true)
   const [hasDub, setHasDub] = useState(false)
-  const { user, addContinueWatching, updateContinueWatchingProgress, addWatchMinutes } = useAuth()
+  const { user, addContinueWatching, updateContinueWatchingProgress, addWatchMinutes, setAudioMode } = useAuth()
 
   const [showNextEpisode, setShowNextEpisode] = useState(false)
   const [nextEpLoading, setNextEpLoading] = useState(false)
@@ -63,21 +64,66 @@ export default function VideoPlayer() {
   const [showControls, setShowControls] = useState(true)
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [showVolume, setShowVolume] = useState(false)
+  const [showSettings, setShowSettings] = useState(false)
+  const [playbackRate, setPlaybackRate] = useState(() => loadVideoSettings().playbackRate)
+  const [autoSkip, setAutoSkip] = useState(() => loadVideoSettings().autoSkip)
+  const [qualityLevels, setQualityLevels] = useState([])
+  const [selectedLevel, setSelectedLevel] = useState(-1)
   const [introSkipped, setIntroSkipped] = useState(false)
   const [outroSkipped, setOutroSkipped] = useState(false)
   const [episodeSearch, setEpisodeSearch] = useState('')
   const containerRef = useRef(null)
   const episodeSearchRef = useRef(null)
   const controlsTimeoutRef = useRef(null)
+  const settingsOpenRef = useRef(false)
 
   const hasNextEpisode = totalEpisodes > 0 && currentEp < totalEpisodes
 
-  const autoplayEnabled = (() => {
-    try {
-      const s = JSON.parse(localStorage.getItem('appSettings') || '{}')
-      return s.autoplay !== false
-    } catch { return true }
-  })()
+  const autoplayEnabled = loadVideoSettings().autoplay
+
+  const SPEED_OPTIONS = [0.5, 0.75, 1, 1.25, 1.5, 1.75, 2]
+
+  const qualityLabel = (h) => {
+    if (h >= 1080) return '1080p'
+    if (h >= 720) return '720p'
+    if (h >= 480) return '480p'
+    if (h >= 360) return '360p'
+    return h ? `${h}p` : 'Auto'
+  }
+
+  function handleQualityChange(index) {
+    const hls = hlsRef.current
+    if (!hls) return
+    // Setting currentLevel swaps renditions in place: playback position and
+    // the playing/paused state are preserved (no reload, no restart).
+    setSelectedLevel(index)
+    hls.currentLevel = index === -1 ? -1 : index
+  }
+
+  function handleSpeedChange(rate) {
+    const video = videoRef.current
+    if (video) video.playbackRate = rate
+    setPlaybackRate(rate)
+    saveVideoSetting('playbackRate', rate)
+  }
+
+  function handleAutoSkipToggle() {
+    const next = !autoSkip
+    setAutoSkip(next)
+    saveVideoSetting('autoSkip', next)
+  }
+
+  function closeSettings() {
+    setShowSettings(false)
+    settingsOpenRef.current = false
+  }
+
+  function toggleSettings() {
+    const next = !showSettings
+    setShowSettings(next)
+    settingsOpenRef.current = next
+    resetControlsTimer()
+  }
 
   useEffect(() => {
     cwRef.current = user?.continueWatching || []
@@ -100,6 +146,11 @@ export default function VideoPlayer() {
       hlsRef.current = null
     }
 
+    setQualityLevels([])
+    setSelectedLevel(-1)
+    setShowSettings(false)
+    settingsOpenRef.current = false
+
     if (Hls.isSupported()) {
       const hls = new Hls({
         xhrSetup: (xhr, reqUrl) => {
@@ -115,6 +166,8 @@ export default function VideoPlayer() {
       hls.loadSource(url)
       hls.attachMedia(video)
       hls.on(Hls.Events.MANIFEST_PARSED, () => {
+        setQualityLevels((hls.levels || []).map((l, i) => ({ index: i, height: l.height || 0 })))
+        setSelectedLevel(-1) // start on Auto
         const cw = cwRef.current.find(
           (e) => e.animeId === String(animeId) && e.episode === Number(currentEp)
         )
@@ -123,6 +176,9 @@ export default function VideoPlayer() {
           video.currentTime = cw.currentTime
         }
         video.play().catch(() => {})
+      })
+      hls.on(Hls.Events.LEVEL_SWITCHED, (_event, data) => {
+        if (typeof data.level === 'number') setSelectedLevel(data.level)
       })
       hls.on(Hls.Events.ERROR, (_event, data) => {
         if (data.fatal) {
@@ -162,6 +218,12 @@ export default function VideoPlayer() {
       }
     }
   }, [streamData, cdnHeaders, retryKey])
+
+  // Keep the persisted playback speed applied to the (persistent) video element.
+  useEffect(() => {
+    const video = videoRef.current
+    if (video) video.playbackRate = playbackRate
+  }, [playbackRate])
 
   useEffect(() => {
     const video = videoRef.current
@@ -228,13 +290,12 @@ export default function VideoPlayer() {
         setAnime(data)
         if (data.episodes && !totalEpisodes) setTotalEpisodes(data.episodes)
 
-        addContinueWatching(animeId, currentEp, data.title, data.coverImage, data.episodes || totalEpisodes, audioMode)
-
         console.log('[VideoPlayer] Resolving stream:', data.title, 'ep', currentEp, audioMode)
         try {
           const result = await resolveStream(animeId, currentEp, audioMode)
           if (cancelled) return
           console.log('[VideoPlayer] Stream resolved via', result.provider, ':', result.url.substring(0, 80))
+          addContinueWatching(animeId, currentEp, data.title, data.coverImage, data.episodes || totalEpisodes, audioMode, result.provider)
           setStreamData(result)
           setActiveProvider(result.provider)
           setProviders(result.providers || [])
@@ -265,15 +326,6 @@ export default function VideoPlayer() {
   }, [animeId, currentEp, audioMode, retryKey])
 
   useEffect(() => {
-    if (hasSub && hasDub) return
-    if (audioMode === 'sub' && !hasSub && hasDub) {
-      navigate(`/watch/${animeId}/${currentEp}?total=${totalEpisodes}&audio=dub`, { replace: true })
-    } else if (audioMode === 'dub' && !hasDub && hasSub) {
-      navigate(`/watch/${animeId}/${currentEp}?total=${totalEpisodes}&audio=sub`, { replace: true })
-    }
-  }, [hasSub, hasDub, audioMode, animeId, currentEp, totalEpisodes, navigate])
-
-  useEffect(() => {
     if (!anime?.relations?.length) return
     let cancelled = false
     setMangaLoading(true)
@@ -285,35 +337,23 @@ export default function VideoPlayer() {
   }, [anime?.relations, anime?.title])
 
   async function switchProvider(providerId) {
-    if (!streamData?.slug || providerId === activeProvider) return
+    if (!animeId || providerId === activeProvider) return
     setProviderError(null)
     setLoading(true)
     setStreamData(null)
     try {
-      const result = await getSources(streamData.slug, currentEp, audioMode, providerId)
-      if (result.sources?.length) {
-        const sourceUrl = result.sources[0].url
-        const newHeaders = result.headers || {}
-        setStreamData({
-          url: sourceUrl,
-          cdnHeaders: newHeaders,
-          provider: providerId,
-          providers,
-          tracks: result.tracks || [],
-          chapters: result.chapters || [],
-          episodeTitle: anime?.title || `Episode ${currentEp}`,
-          totalEpisodes,
-          slug: streamData.slug,
-        })
-        setActiveProvider(providerId)
-        setCdnHeaders(newHeaders)
-      } else {
-        setProviderError(`Provider ${providerId} returned no sources`)
-      }
+      // Route the manual switch through the same verified resolution as the
+      // initial load, so a provider that mirrors its sub stream for dub (or
+      // returns no sources) is rejected instead of playing wrong audio.
+      const result = await resolveStream(animeId, currentEp, audioMode, providerId)
+      setStreamData(result)
+      setActiveProvider(result.provider)
+      setProviders(result.providers || [])
+      setCdnHeaders(result.cdnHeaders || {})
       setLoading(false)
     } catch (err) {
       console.error('[VideoPlayer] Provider switch error:', err)
-      setProviderError(`Failed to load from ${providerId}`)
+      setProviderError(err.message || `Failed to load from ${providerId}`)
       setLoading(false)
     }
   }
@@ -397,6 +437,7 @@ export default function VideoPlayer() {
     setShowControls(true)
     if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current)
     controlsTimeoutRef.current = setTimeout(() => {
+      if (settingsOpenRef.current) return
       if (videoRef.current && !videoRef.current.paused) {
         setShowControls(false)
       }
@@ -416,6 +457,20 @@ export default function VideoPlayer() {
         if (remaining <= 20 && remaining > 0) {
           nextEpTriggeredRef.current = true
           setShowNextEpisode(true)
+        }
+      }
+      if (autoSkip && streamData?.chapters?.length) {
+        const intro = streamData.chapters.find(ch => /intro/i.test(ch.title))
+        const outro = streamData.chapters.find(ch => /outro|ed\b|ending/i.test(ch.title))
+        if (intro && !introSkipped && video.currentTime >= Math.max(0, intro.start) - 0.5 && video.currentTime < intro.end) {
+          video.currentTime = intro.end + 0.5
+          setIntroSkipped(true)
+          return
+        }
+        if (outro && !outroSkipped && video.currentTime >= Math.max(0, outro.start) - 0.5 && video.currentTime < outro.end) {
+          video.currentTime = outro.end + 0.5
+          setOutroSkipped(true)
+          return
         }
       }
       if (!streamData?.chapters?.length) return
@@ -448,7 +503,7 @@ export default function VideoPlayer() {
       video.removeEventListener('loadedmetadata', onLoadedMetadata)
       video.removeEventListener('ended', onEnded)
     }
-  }, [streamData, hasNextEpisode, currentEp, totalEpisodes])
+  }, [streamData, hasNextEpisode, currentEp, totalEpisodes, autoSkip, introSkipped, outroSkipped])
 
   useEffect(() => {
     nextEpTriggeredRef.current = false
@@ -629,12 +684,95 @@ export default function VideoPlayer() {
                       {formatTime(currentTime)} / {formatTime(duration)}
                     </span>
                     <div className="flex-1" />
+                    <button onClick={toggleSettings} className="p-1 text-white/60 hover:text-white transition-colors" title="Settings">
+                      <Settings className="w-5 h-5" />
+                    </button>
                     <button onClick={toggleFullscreen} className="p-1 text-white/60 hover:text-white transition-colors">
                       {isFullscreen ? <Minimize className="w-5 h-5" /> : <Maximize className="w-5 h-5" />}
                     </button>
                   </div>
                 </div>
               </div>
+
+              {showSettings && (
+                <div className="absolute bottom-24 right-2 w-64 bg-gray-900/95 backdrop-blur rounded-xl border border-white/10 shadow-xl z-30 overflow-hidden">
+                  <div className="px-4 py-3 border-b border-white/10 flex items-center justify-between">
+                    <h3 className="text-sm font-semibold text-white">Settings</h3>
+                    <button onClick={closeSettings} className="text-gray-400 hover:text-white text-sm p-0.5" aria-label="Close settings">
+                      &#x2715;
+                    </button>
+                  </div>
+                  <div className="p-4 space-y-5 max-h-[50vh] overflow-y-auto">
+                    {qualityLevels.length > 0 && (
+                      <div>
+                        <p className="text-xs text-gray-400 mb-2">Quality</p>
+                        <div className="flex flex-wrap gap-1.5">
+                          <button
+                            onClick={() => handleQualityChange(-1)}
+                            className={`px-2.5 py-1 text-xs rounded-md transition-colors ${
+                              selectedLevel === -1
+                                ? 'bg-primary text-white'
+                                : 'bg-white/5 text-gray-300 hover:bg-white/10 hover:text-white'
+                            }`}
+                          >
+                            Auto
+                          </button>
+                          {qualityLevels.map((l) => (
+                            <button
+                              key={l.index}
+                              onClick={() => handleQualityChange(l.index)}
+                              className={`px-2.5 py-1 text-xs rounded-md transition-colors ${
+                                selectedLevel === l.index
+                                  ? 'bg-primary text-white'
+                                  : 'bg-white/5 text-gray-300 hover:bg-white/10 hover:text-white'
+                              }`}
+                            >
+                              {qualityLabel(l.height)}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    <div>
+                      <p className="text-xs text-gray-400 mb-2">Playback Speed</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {SPEED_OPTIONS.map((rate) => (
+                          <button
+                            key={rate}
+                            onClick={() => handleSpeedChange(rate)}
+                            className={`px-2.5 py-1 text-xs rounded-md transition-colors ${
+                              playbackRate === rate
+                                ? 'bg-primary text-white'
+                                : 'bg-white/5 text-gray-300 hover:bg-white/10 hover:text-white'
+                            }`}
+                          >
+                            {rate === 1 ? '1x' : `${rate}x`}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between gap-4">
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-white">Auto Skip</p>
+                        <p className="text-xs text-gray-500 mt-0.5">Skip opening and ending chapters automatically</p>
+                      </div>
+                      <button
+                        onClick={handleAutoSkipToggle}
+                        aria-label="Toggle auto skip"
+                        className={`relative w-11 h-6 rounded-full transition-colors shrink-0 ${
+                          autoSkip ? 'bg-primary' : 'bg-white/10'
+                        }`}
+                      >
+                        <span
+                          className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full transition-transform ${
+                            autoSkip ? 'translate-x-5' : ''
+                          }`}
+                        />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               <NextEpisodeOverlay
                 visible={showNextEpisode}
@@ -713,6 +851,24 @@ export default function VideoPlayer() {
                     >
                       <RefreshCw className="w-4 h-4" /> Retry
                     </button>
+                    {audioMode === 'dub' && hasSub && (
+                      <Link
+                        to={`/watch/${animeId}/${currentEp}?total=${totalEpisodes}&audio=sub`}
+                        onClick={() => setAudioMode('sub')}
+                        className="mt-2 inline-flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 text-white text-sm font-semibold rounded-lg transition-colors"
+                      >
+                        Watch Sub instead
+                      </Link>
+                    )}
+                    {audioMode === 'sub' && hasDub && (
+                      <Link
+                        to={`/watch/${animeId}/${currentEp}?total=${totalEpisodes}&audio=dub`}
+                        onClick={() => setAudioMode('dub')}
+                        className="mt-2 inline-flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 text-white text-sm font-semibold rounded-lg transition-colors"
+                      >
+                        Watch Dub instead
+                      </Link>
+                    )}
                   </div>
                 </>
               ) : null}
@@ -778,6 +934,7 @@ export default function VideoPlayer() {
               {!hasSub && <div className="absolute inset-0 z-10 cursor-not-allowed rounded-lg" />}
               <Link
                 to={hasSub ? `/watch/${animeId}/${currentEp}?total=${totalEpisodes}&audio=sub` : undefined}
+                onClick={() => hasSub && setAudioMode('sub')}
                 className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition-all relative z-0 ${
                   !hasSub
                     ? 'bg-white/5 text-gray-600 opacity-50'
@@ -799,6 +956,7 @@ export default function VideoPlayer() {
               {!hasDub && <div className="absolute inset-0 z-10 cursor-not-allowed rounded-lg" />}
               <Link
                 to={hasDub ? `/watch/${animeId}/${currentEp}?total=${totalEpisodes}&audio=dub` : undefined}
+                onClick={() => hasDub && setAudioMode('dub')}
                 className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition-all relative z-0 ${
                   !hasDub
                     ? 'bg-white/5 text-gray-600 opacity-50'

@@ -77,12 +77,55 @@ export async function checkAvailability(anilistId, episode) {
 
 const STREAM_BLACKLIST = ['beep', 'sora']
 
-// Resolve the full streaming response for the player: find the anime slug, pick
-// a non-blacklisted provider (kiwi preferred), fetch its sources, and bundle
-// everything the client needs (url, headers, tracks, metadata) in one call.
-export async function resolveStream({ anilistId, episode, audio = 'sub' }) {
+// Resolve errors get a stable `code` so the client can show a tailored message
+// (e.g. "English Dub is not available") instead of a generic failure.
+function errCode(code, message) {
+  const err = new Error(message)
+  err.code = code
+  return err
+}
+
+// Providers that mirror their sub stream for "dub" requests (kiwi, uwu return
+// the exact same m3u8 for sub and dub) would play Japanese audio under a DUB
+// label. We detect that by comparing the source URLs anidap hands back for the
+// two audio types: identical URL => not a real dub => skip that provider.
+const AUDIO_VERDICT_TTL = 5 * 60 * 1000
+
+// Cached per (slug, ep, provider): 'real' (distinct dub stream), 'mirror' (same
+// URL as sub, so not actually dubbed), or 'nosrc' (no dub source). Anidap
+// rate-limits hard (429, up to ~43s), so the verdict is cached to avoid
+// re-comparing sub/dub on every request.
+async function dubVerdict(slug, ep, providerId) {
+  return ANIDAP_CACHE.cached(`dubVerdict:${slug}:${ep}:${providerId}`, async () => {
+    const [sub, dub] = await Promise.all([
+      getSources(slug, ep, 'sub', providerId).catch(() => null),
+      getSources(slug, ep, 'dub', providerId).catch(() => null),
+    ])
+    const dubUrl = dub?.sources?.[0]?.url
+    if (!dubUrl) return 'nosrc'
+    const subUrl = sub?.sources?.[0]?.url
+    if (subUrl && subUrl === dubUrl) return 'mirror'
+    return 'real'
+  }, AUDIO_VERDICT_TTL)
+}
+
+// Priority order: kiwi first, then a provider flagged default, then the rest.
+// Stable (no mutation of the source arrays).
+function providerPriority(providers) {
+  const rank = (p) => (p.id === 'kiwi' ? 0 : p.default ? 1 : 2)
+  return [...providers].sort((a, b) => rank(a) - rank(b))
+}
+
+// Resolve the full streaming response for the player: find the anime slug,
+// pick a non-blacklisted provider whose source actually matches the requested
+// audio (falling back across providers before playback), and bundle everything
+// the client needs (url, headers, tracks, metadata) in one call. For DUB the
+// selected provider's stream is verified against its own SUB source so a DUB
+// label can never silently wrap a Japanese stream. Pass `provider` to pin the
+// resolution to one provider (used by the player's manual provider switch).
+export async function resolveStream({ anilistId, episode, audio = 'sub', provider }) {
   const ep = Number(episode)
-  const type = audio
+  const type = audio === 'dub' ? 'dub' : 'sub'
 
   const details = await getAnimeDetails(anilistId)
   const slug = details?.data?.id
@@ -90,18 +133,48 @@ export async function resolveStream({ anilistId, episode, audio = 'sub' }) {
 
   const servers = await getServers(slug, ep)
   const allProviders = type === 'dub' ? servers.dubProviders : servers.subProviders
-  if (!allProviders?.length) throw new Error(`No ${type} providers available`)
+  if (!allProviders?.length) throw errCode(`${type.toUpperCase()}_NOT_AVAILABLE`, type === 'dub'
+    ? 'English Dub is not available for this episode'
+    : 'Subtitled stream is not available for this episode')
 
-  const providers = allProviders.filter((p) => !STREAM_BLACKLIST.includes(p.id))
-  if (!providers.length) throw new Error(`No usable ${type} providers`)
+  const usable = allProviders.filter((p) => !STREAM_BLACKLIST.includes(p.id))
+  if (!usable.length) throw errCode(`${type.toUpperCase()}_NOT_AVAILABLE`, type === 'dub'
+    ? 'English Dub is not available for this episode'
+    : 'Subtitled stream is not available for this episode')
 
-  const defaultProvider = providers.find((p) => p.id === 'kiwi') || providers.find((p) => p.default) || providers[0]
+  // Explicit provider pin: verify it too, but don't silently fall back to a
+  // different provider (the user asked for this one).
+  const candidates = provider
+    ? usable.filter((p) => p.id === provider)
+    : providerPriority(usable)
+  if (!candidates.length) throw errCode('PROVIDER_NOT_FOUND', `Provider ${provider} is not available for ${type}`)
 
-  const sources = await getSources(slug, ep, type, defaultProvider.id)
-  if (!sources.sources?.length) throw new Error('No sources returned')
+  let resolved = null
+  for (const p of candidates) {
+    if (type === 'dub') {
+      const verdict = await dubVerdict(slug, ep, p.id)
+      if (verdict !== 'real') {
+        console.log(`[stream] ${slug} ep ${ep} dub: skip ${p.id} (${verdict})`)
+        continue
+      }
+    }
+    const sources = await getSources(slug, ep, type, p.id).catch(() => null)
+    if (!sources?.sources?.length) {
+      console.log(`[stream] ${slug} ep ${ep} ${type}: skip ${p.id} (no sources)`)
+      continue
+    }
+    resolved = { provider: p.id, sources }
+    break
+  }
 
-  const sourceUrl = sources.sources[0].url
-  const cdnHeaders = sources.headers || {}
+  if (!resolved) {
+    throw errCode(`${type.toUpperCase()}_NOT_AVAILABLE`, type === 'dub'
+      ? 'English Dub is not available for this episode'
+      : 'Subtitled stream is not available for this episode')
+  }
+
+  const sourceUrl = resolved.sources.sources[0].url
+  const cdnHeaders = resolved.sources.headers || {}
 
   const episodeTitle = details?.data?.title?.english
     || details?.data?.title?.romaji
@@ -109,20 +182,21 @@ export async function resolveStream({ anilistId, episode, audio = 'sub' }) {
 
   const totalEpisodes = details?.data?.episodeCount || details?.data?.episodes || 0
 
-  console.log(`[stream] ${slug} ep ${ep} ${type} via ${defaultProvider.id}: ${sourceUrl.substring(0, 80)}...`)
+  console.log(`[stream] ${slug} ep ${ep} ${type} via ${resolved.provider}: ${sourceUrl.substring(0, 80)}...`)
 
   return {
     url: sourceUrl,
     cdnHeaders,
-    provider: defaultProvider.id,
-    providers: providers.map((p) => ({ id: p.id, tip: p.tip, default: p.default })),
-    tracks: sources.tracks || [],
-    chapters: sources.chapters || [],
+    provider: resolved.provider,
+    providers: usable.map((p) => ({ id: p.id, tip: p.tip, default: p.default })),
+    tracks: resolved.sources.tracks || [],
+    chapters: resolved.sources.chapters || [],
     episodeTitle,
     totalEpisodes,
     slug,
     hasSub: !!(servers.subProviders?.length),
-    hasDub: !!(servers.dubProviders?.length),
+    hasDub: type === 'dub' ? true : !!(servers.dubProviders?.length),
+    audioVerified: true,
   }
 }
 

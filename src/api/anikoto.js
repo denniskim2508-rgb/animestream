@@ -3,8 +3,11 @@ const API_BASE = ''
 async function apiFetch(path) {
   const res = await fetch(`${API_BASE}${path}`)
   if (!res.ok) {
-    const err = await res.json().catch(() => ({ error: 'Request failed' }))
-    throw new Error(err.error || `HTTP ${res.status}`)
+    const errBody = await res.json().catch(() => ({ error: 'Request failed' }))
+    const err = new Error(errBody.error || `HTTP ${res.status}`)
+    err.code = errBody.code
+    err.status = res.status
+    throw err
   }
   return res.json()
 }
@@ -29,12 +32,13 @@ export async function getSources(slug, epNum, type, providerId) {
   return apiFetch(`/api/anidap/sources/${slug}/${epNum}/${type}/${providerId}`)
 }
 
-export async function resolveStream(anilistId, episode, audioMode) {
+export async function resolveStream(anilistId, episode, audioMode, provider) {
   const params = new URLSearchParams({
     anilistId: String(anilistId),
     episode: String(episode),
     audio: audioMode || 'sub',
   })
+  if (provider) params.set('provider', provider)
   return apiFetch(`/api/stream/resolve?${params}`)
 }
 

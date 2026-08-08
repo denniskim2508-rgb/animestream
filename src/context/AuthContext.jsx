@@ -25,6 +25,7 @@ import { auth, db } from '../firebase'
 import { getRandomAvatar } from '../data/avatars'
 import { THEMES, DEFAULT_THEME } from '../data/themes'
 import { ADMIN_EMAILS } from '../config/admin'
+import { loadAudioPreference, saveAudioPreference } from '../utils/videoSettings'
 
 const AuthContext = createContext(null)
 
@@ -72,6 +73,9 @@ async function ensureProfile(firebaseUser, name) {
     badges: [],
     commentsPosted: 0,
     accent: getLocalAccent(),
+    preferredAudio: loadAudioPreference() || 'sub',
+    dubWatchCount: 0,
+    subWatchCount: 0,
     createdAt: serverTimestamp(),
   }
   await setDoc(doc(db, 'users', firebaseUser.uid), profile)
@@ -81,7 +85,8 @@ async function ensureProfile(firebaseUser, name) {
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
   const [loading, setLoading] = useState(true)
-  const [audioMode, setAudioMode] = useState('sub')
+  const [audioMode, setAudioModeState] = useState(() => loadAudioPreference() || 'sub')
+  const audioOverrideRef = useRef(false)
   const [notifications, setNotifications] = useState([])
   const [accent, setAccentState] = useState(() => getLocalAccent())
   const userRef = useRef(null)
@@ -89,6 +94,20 @@ export function AuthProvider({ children }) {
 
   const unreadCount = notifications.filter((n) => !n.read).length
   const isAdmin = isAdminEmail(user?.email)
+
+  // Choosing a language is an explicit user action: it wins over any stored or
+  // learned preference for this session and persists as the new preference
+  // (Firestore for signed-in users, localStorage for guests).
+  const setAudioMode = useCallback((mode) => {
+    const next = mode === 'dub' ? 'dub' : 'sub'
+    setAudioModeState(next)
+    audioOverrideRef.current = true
+    saveAudioPreference(next)
+    const u = userRef.current
+    if (u) {
+      updateDoc(doc(db, 'users', u.uid), { preferredAudio: next }).catch(() => {})
+    }
+  }, [])
 
   const setAccent = useCallback(async (name) => {
     const valid = THEMES[name] ? name : DEFAULT_THEME
@@ -122,6 +141,9 @@ export function AuthProvider({ children }) {
         const profile = await getProfile(fbUser.uid)
         if (profile) {
           setUser({ uid: fbUser.uid, ...profile })
+          if (!audioOverrideRef.current && profile.preferredAudio) {
+            setAudioModeState(profile.preferredAudio === 'dub' ? 'dub' : 'sub')
+          }
           if (profile.accent) {
             setAccentState(profile.accent)
             applyAccent(profile.accent)
@@ -220,19 +242,22 @@ export function AuthProvider({ children }) {
     localStorage.setItem('cw_guest', JSON.stringify(list))
   }
 
-  const addContinueWatching = useCallback(async (animeId, episode, title, coverImage, totalEpisodes, audioMode) => {
+  const addContinueWatching = useCallback(async (animeId, episode, title, coverImage, totalEpisodes, audioMode, provider) => {
     const u = userRef.current
     const list = u ? (u.continueWatching || []) : getLocalContinueWatching()
     const prev = list.find((e) => e.animeId === String(animeId))
     const now = Date.now()
     const sameEpisode = prev?.episode === Number(episode)
+    const audio = audioMode === 'dub' ? 'dub' : 'sub'
     const entry = {
       animeId: String(animeId),
       episode: Number(episode),
       title: title || prev?.title || '',
       coverImage: coverImage || prev?.coverImage || '',
       totalEpisodes: Number(totalEpisodes) || prev?.totalEpisodes || 0,
-      audioMode: audioMode || prev?.audioMode || 'sub',
+      audioMode: audio,
+      audioLanguage: audio,
+      provider: provider || prev?.provider || null,
       currentTime: sameEpisode && !prev?.completed ? prev?.currentTime || 0 : 0,
       duration: prev?.duration || 0,
       progressPercent: sameEpisode && !prev?.completed ? prev?.progressPercent || 0 : 0,
@@ -249,8 +274,12 @@ export function AuthProvider({ children }) {
     }
     const existing = list.filter((e) => e.animeId !== String(animeId))
     const updated = [entry, ...existing].slice(0, 20)
-    await updateDoc(doc(db, 'users', u.uid), { continueWatching: updated })
-    setUser((prev) => ({ ...prev, continueWatching: updated }))
+    await updateDoc(doc(db, 'users', u.uid), {
+      continueWatching: updated,
+      subWatchCount: (u.subWatchCount || 0) + (audio === 'sub' ? 1 : 0),
+      dubWatchCount: (u.dubWatchCount || 0) + (audio === 'dub' ? 1 : 0),
+    })
+    setUser((prev) => ({ ...prev, continueWatching: updated, subWatchCount: (prev.subWatchCount || 0) + (audio === 'sub' ? 1 : 0), dubWatchCount: (prev.dubWatchCount || 0) + (audio === 'dub' ? 1 : 0) }))
   }, [])
 
   const updateContinueWatchingProgress = useCallback(async (animeId, episode, currentTime, duration) => {

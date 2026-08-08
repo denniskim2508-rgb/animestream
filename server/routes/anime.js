@@ -80,14 +80,17 @@ router.get('/stream/availability', async (req, res) => {
 })
 
 router.get('/stream/resolve', async (req, res) => {
-  const { anilistId, episode, audio } = req.query
+  const { anilistId, episode, audio, provider } = req.query
   if (!anilistId || !episode) {
     return res.status(400).json({ error: 'anilistId and episode are required' })
   }
   try {
-    res.json(await resolveStream({ anilistId, episode, audio }))
+    res.json(await resolveStream({ anilistId, episode, audio, provider }))
   } catch (err) {
     console.error('[stream] Error:', err.message)
+    if (err.code === 'DUB_NOT_AVAILABLE' || err.code === 'SUB_NOT_AVAILABLE' || err.code === 'PROVIDER_NOT_FOUND') {
+      return res.status(404).json({ error: err.message, code: err.code })
+    }
     res.status(500).json({ error: err.message })
   }
 })
