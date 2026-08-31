@@ -127,16 +127,6 @@ export default function Signup() {
             {password && confirmPassword && password !== confirmPassword && (
               <p className="text-xs text-anime-red mt-1">Passwords do not match</p>
             )}
-            {password && (
-              <div className="mt-3 space-y-1.5">
-                {rules.map((rule, i) => (
-                  <div key={rule.label} className={`flex items-center gap-2 text-xs transition-colors ${passwordStrength[i] ? 'text-green-400' : 'text-gray-500'}`}>
-                    {passwordStrength[i] ? <Check className="w-3.5 h-3.5 shrink-0" /> : <Circle className="w-3.5 h-3.5 shrink-0" />}
-                    {rule.label}
-                  </div>
-                ))}
-              </div>
-            )}
           </div>
 
           {error && (
@@ -186,7 +176,17 @@ export default function Signup() {
             Sign In
           </Link>
         </p>
-      </div>
-    </div>
+            </div>
+            {password && (
+              <div className="mt-3 space-y-1.5">
+                {rules.map((rule, i) => (
+                  <div key={rule.label} className={`flex items-center gap-2 text-xs transition-colors ${passwordStrength[i] ? 'text-green-400' : 'text-gray-500'}`}>
+                    {passwordStrength[i] ? <Check className="w-3.5 h-3.5 shrink-0" /> : <Circle className="w-3.5 h-3.5 shrink-0" />}
+                    {rule.label}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
   )
 }

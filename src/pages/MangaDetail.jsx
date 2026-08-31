@@ -259,12 +259,12 @@ export default function MangaDetail() {
                   </p>
                   <p className="text-sm text-gray-400 mt-0.5">
                     {adaptation.filler
-                      ? `That episode is anime-original — the manga story resumes at ${adaptation.volume ? `Volume ${adaptation.volume}, ` : ''}Chapter ${adaptation.nextChapter}.`
-                      : `The anime stopped at ${adaptation.volume ? `Volume ${adaptation.volume}, ` : ''}Chapter ${adaptation.lastAdaptedChapter} — pick up where it left off.`}
+                      ? `That episode is anime-original — the manga story resumes at Chapter ${adaptation.nextChapter}.`
+                      : `The anime stopped at Chapter ${adaptation.lastAdaptedChapter} — pick up where it left off.`}
                   </p>
                 </div>
                 <span className="inline-flex items-center gap-2 px-5 py-2.5 bg-primary hover:bg-primary-dark text-white text-sm font-semibold rounded-xl transition-all active:scale-95 shadow-lg shadow-primary/25 shrink-0">
-                  Continue from {adaptation.volume ? `Volume ${adaptation.volume}, ` : ''}Chapter {adaptation.nextChapter}
+                  Continue from Chapter {adaptation.nextChapter}
                   <ChevronRight className="w-4 h-4" />
                 </span>
               </div>

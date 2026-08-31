@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
-import { useState } from 'react'
 import { Star, Play, Plus, Check, Heart } from 'lucide-react'
+import { useState } from 'react'
 import { useAuth } from '../../context/AuthContext'
 
 export default function AnimeCard({ anime, size = 'normal' }) {
@@ -10,91 +10,115 @@ export default function AnimeCard({ anime, size = 'normal' }) {
   const isFav = user?.favorites?.some((item) => (typeof item === 'object' ? item.id : item) === anime.id)
   const inWatchlist = user?.watchlist?.some((item) => (typeof item === 'object' ? item.id : item) === anime.id)
 
-  return (
-    <div className="kx-anime-card shrink-0 group">
-      <style>{`
-        .kx-anime-card { width: 158px; }
-        @media (min-width: 640px)  { .kx-anime-card { width: 186px; } }
-        @media (min-width: 1024px) { .kx-anime-card { width: 300px; } }
-        @media (min-width: 1920px) { .kx-anime-card { width: 310px; } }
-      `}</style>
+  const sizeClasses = {
+    small: 'w-[140px] sm:w-[160px]',
+    normal: 'w-[160px] sm:w-[200px]',
+    large: 'w-[200px] sm:w-[240px]',
+  }
 
-      <Link to={`/anime/${anime.id}`} className="block focus:outline-none">
-        <div className="kx-poster aspect-[2/3] bg-kx-surface2">
-          {!imageLoaded && <div className="absolute inset-0 skeleton" />}
+  const statusLabel = anime.format === 'MOVIE' ? 'Movie'
+    : anime.format === 'OVA' ? 'OVA'
+    : anime.format === 'ONA' ? 'ONA'
+    : anime.format === 'SPECIAL' ? 'Special'
+    : anime.format === 'TV_SHORT' ? 'TV Short'
+    : anime.episodes ? `${anime.episodes} eps`
+    : 'Ongoing'
+
+  const airing = anime.nextAiringEpisode
+  const airingLabel = airing ? formatAiring(airing.timeUntilAiring, airing.episode) : null
+
+  return (
+    <div className={`${sizeClasses[size]} shrink-0 group relative`}>
+      <Link to={`/anime/${anime.id}`} className="block">
+        <div className="aspect-[3/4] rounded-xl overflow-hidden relative anime-card-hover">
+          {!imageLoaded && <div className="absolute inset-0 skeleton rounded-xl" />}
           <img
             src={anime.coverImage}
             alt={anime.title}
-            loading="lazy"
-            decoding="async"
             onLoad={() => setImageLoaded(true)}
-            onError={() => setImageLoaded(true)}
-            className={`w-full h-full object-cover transition-opacity duration-400 ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
+            className={`w-full h-full object-cover transition-opacity ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
           />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
 
-          {/* Subtle bottom shade — keeps title readable without washing out art */}
-          <div className="absolute inset-0 kx-poster-shade opacity-90 group-hover:opacity-100 transition-opacity pointer-events-none" />
+          <div className="absolute inset-0 flex flex-col justify-end p-3 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+            <div className="flex items-center gap-2 mb-2">
+              <Link
+                to={`/watch/${anime.id}/1?total=${anime.episodes || 0}`}
+                onClick={(e) => e.stopPropagation()}
+                className="w-8 h-8 rounded-full bg-primary flex items-center justify-center hover:bg-primary-dark transition-colors"
+              >
+                <Play className="w-4 h-4 text-white fill-white" />
+              </Link>
+              {user && (
+                <>
+                  <button
+                    onClick={(e) => {
+                      e.preventDefault()
+                      e.stopPropagation()
+                      toggleWatchlist(anime)
+                    }}
+                    className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 transition-colors"
+                  >
+                    {inWatchlist ? <Check className="w-4 h-4 text-green-400" /> : <Plus className="w-4 h-4 text-white" />}
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.preventDefault()
+                      e.stopPropagation()
+                      toggleFavorite(anime)
+                    }}
+                    className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 transition-colors"
+                  >
+                    <Heart className={`w-4 h-4 ${isFav ? 'text-anime-red fill-anime-red' : 'text-white'}`} />
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
 
-          {/* Top-left: rating */}
-          {anime.rating != null && (
-            <span className="absolute top-2 left-2 inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[11px] font-bold"
-              style={{ background: 'rgba(0,0,0,0.62)', backdropFilter: 'blur(6px)', color: '#facc15' }}>
-              <Star className="w-3 h-3 fill-[#facc15] text-[#facc15]" /> {Number(anime.rating).toFixed(1)}
+          <div className="absolute top-2 right-2">
+            <span className="px-2 py-0.5 rounded-md bg-black/60 text-[10px] font-bold uppercase tracking-wider backdrop-blur-sm">
+              {statusLabel}
             </span>
-          )}
+          </div>
 
-          {/* Top-right: episode count */}
-          {anime.episodes && (
-            <span className="absolute top-2 right-2 px-1.5 py-0.5 rounded-md text-[10px] font-bold"
-              style={{ background: 'rgba(0,0,0,0.62)', backdropFilter: 'blur(6px)', color: 'rgba(255,255,255,0.85)' }}>
-              {anime.episodes} EP
-            </span>
-          )}
-
-          {/* Hover: quick actions */}
-          <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 flex items-center justify-center gap-2 opacity-0 scale-90 group-hover:opacity-100 group-hover:scale-100 transition-all duration-200 pointer-events-none">
-            {user && (
-              <span className="contents">
-                <span
-                  role="button"
-                  tabIndex={-1}
-                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleWatchlist(anime) }}
-                  className="pointer-events-auto w-9 h-9 rounded-full bg-white/14 hover:bg-[#8B5CF6] hover:text-[#150b29] backdrop-blur-md border border-white/20 flex items-center justify-center transition-colors text-white"
-                >
-                  {inWatchlist ? <Check className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
-                </span>
-                <span
-                  role="button"
-                  tabIndex={-1}
-                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleFavorite(anime) }}
-                  className={`pointer-events-auto w-9 h-9 rounded-full bg-white/14 hover:bg-[#ef4444] backdrop-blur-md border border-white/20 flex items-center justify-center transition-colors ${isFav ? 'text-[#ef4444]' : 'text-white'}`}
-                >
-                  <Heart className={`w-4 h-4 ${isFav ? 'fill-[#ef4444]' : ''}`} />
-                </span>
+          {airingLabel && (
+            <div className="absolute top-2 left-2">
+              <span className="px-2 py-0.5 rounded-md bg-primary/80 text-[10px] font-bold text-white backdrop-blur-sm">
+                {airingLabel}
               </span>
+            </div>
+          )}
+        </div>
+
+        <div className="mt-2 px-1">
+          <h3 className="text-sm font-semibold text-white truncate group-hover:text-primary-light transition-colors">
+            {anime.title}
+          </h3>
+          <div className="flex items-center gap-2 mt-1">
+            {anime.rating != null && (
+              <div className="flex items-center gap-1">
+                <Star className="w-3 h-3 text-yellow-400 fill-yellow-400" />
+                <span className="text-xs font-medium text-gray-300">{anime.rating}</span>
+              </div>
             )}
-          </div>
-
-          {/* Hover: play affordance */}
-          <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none">
-            <span className="mt-14 w-11 h-11 rounded-full flex items-center justify-center shadow-lg"
-              style={{ background: 'rgba(255,255,255,0.92)' }}>
-              <Play className="w-5 h-5 fill-[#080D18] text-[#080D18] ml-0.5" />
-            </span>
-          </div>
-
-          {/* Bottom: title + year — inside the poster shade */}
-          <div className="absolute inset-x-0 bottom-0 px-2.5 pb-2.5 pt-8 pointer-events-none">
-            <h3 className="text-white font-semibold leading-snug line-clamp-2 group-hover:text-white transition-colors"
-              style={{ fontSize: '17px', lineHeight: 1.32 }}>
-              {anime.title}
-            </h3>
-            <p className="text-white/45 mt-0.5" style={{ fontSize: '15px', lineHeight: 1.3 }}>
-              {anime.releaseYear ? anime.releaseYear : anime.format === 'MOVIE' ? 'Movie' : ''}
-            </p>
+            {anime.rating != null && <span className="text-[10px] text-gray-500">·</span>}
+            <span className="text-xs text-gray-500">{anime.releaseYear || '—'}</span>
           </div>
         </div>
       </Link>
     </div>
   )
+}
+
+function formatAiring(seconds, episode) {
+  if (!seconds || seconds <= 0) return `Ep ${episode} today`
+  const days = Math.floor(seconds / 86400)
+  const hours = Math.floor((seconds % 86400) / 3600)
+  const mins = Math.floor((seconds % 3600) / 60)
+  const parts = []
+  if (days > 0) parts.push(`${days}d`)
+  if (hours > 0) parts.push(`${hours}h`)
+  if (parts.length === 0) parts.push(`${mins}m`)
+  return `Ep ${episode} in ${parts.join(' ')}`
 }
