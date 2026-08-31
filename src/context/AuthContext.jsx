@@ -92,6 +92,16 @@ export function AuthProvider({ children }) {
   const userRef = useRef(null)
   userRef.current = user
 
+  // Latest in-memory Continue Watching list plus a serialized Firestore write
+  // queue. Every CW update builds on the most recent list and writes land one
+  // at a time, so overlapping saves can never clobber each other out of order
+  // (an older episode write must not overwrite a newer one).
+  const latestCwRef = useRef(null)
+  const cwWriteQueueRef = useRef(Promise.resolve())
+  useEffect(() => {
+    latestCwRef.current = user?.continueWatching || []
+  }, [user?.continueWatching])
+
   const unreadCount = notifications.filter((n) => !n.read).length
   const isAdmin = isAdminEmail(user?.email)
 
@@ -244,7 +254,7 @@ export function AuthProvider({ children }) {
 
   const addContinueWatching = useCallback(async (animeId, episode, title, coverImage, totalEpisodes, audioMode, provider) => {
     const u = userRef.current
-    const list = u ? (u.continueWatching || []) : getLocalContinueWatching()
+    const list = u ? (latestCwRef.current ?? (u.continueWatching || [])) : getLocalContinueWatching()
     const prev = list.find((e) => e.animeId === String(animeId))
     const now = Date.now()
     const sameEpisode = prev?.episode === Number(episode)
@@ -274,15 +284,18 @@ export function AuthProvider({ children }) {
     }
     const existing = list.filter((e) => e.animeId !== String(animeId))
     const updated = [entry, ...existing].slice(0, 20)
-    await updateDoc(doc(db, 'users', u.uid), {
-      continueWatching: updated,
-      subWatchCount: (u.subWatchCount || 0) + (audio === 'sub' ? 1 : 0),
-      dubWatchCount: (u.dubWatchCount || 0) + (audio === 'dub' ? 1 : 0),
-    })
+    latestCwRef.current = updated
     setUser((prev) => ({ ...prev, continueWatching: updated, subWatchCount: (prev.subWatchCount || 0) + (audio === 'sub' ? 1 : 0), dubWatchCount: (prev.dubWatchCount || 0) + (audio === 'dub' ? 1 : 0) }))
+    cwWriteQueueRef.current = cwWriteQueueRef.current
+      .catch(() => {})
+      .then(() => updateDoc(doc(db, 'users', u.uid), {
+        continueWatching: updated,
+        subWatchCount: (u.subWatchCount || 0) + (audio === 'sub' ? 1 : 0),
+        dubWatchCount: (u.dubWatchCount || 0) + (audio === 'dub' ? 1 : 0),
+      }))
   }, [])
 
-  const updateContinueWatchingProgress = useCallback(async (animeId, episode, currentTime, duration) => {
+  const updateContinueWatchingProgress = useCallback(async (animeId, episode, currentTime, duration, provider) => {
     const u = userRef.current
     const progressPercent = duration > 0 ? Math.min(Math.round((currentTime / duration) * 100), 100) : 0
     const mapEntry = (e) => {
@@ -290,6 +303,7 @@ export function AuthProvider({ children }) {
         const finished = duration > 0 && currentTime / duration >= 0.95
         return {
           ...e,
+          provider: provider || e.provider,
           episode: Number(episode),
           currentTime,
           duration,
@@ -305,11 +319,14 @@ export function AuthProvider({ children }) {
       saveLocalContinueWatching(getLocalContinueWatching().map(mapEntry))
       return
     }
-    const updated = (u.continueWatching || [])
+    const updated = (latestCwRef.current ?? (u.continueWatching || []))
       .map(mapEntry)
       .sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0))
-    await updateDoc(doc(db, 'users', u.uid), { continueWatching: updated })
+    latestCwRef.current = updated
     setUser((prev) => ({ ...prev, continueWatching: updated }))
+    cwWriteQueueRef.current = cwWriteQueueRef.current
+      .catch(() => {})
+      .then(() => updateDoc(doc(db, 'users', u.uid), { continueWatching: updated }))
   }, [])
 
   const removeContinueWatching = useCallback(async (animeId) => {
@@ -319,9 +336,12 @@ export function AuthProvider({ children }) {
       saveLocalContinueWatching(list)
       return
     }
-    const updated = (u.continueWatching || []).filter((e) => e.animeId !== String(animeId))
-    await updateDoc(doc(db, 'users', u.uid), { continueWatching: updated })
+    const updated = (latestCwRef.current ?? (u.continueWatching || [])).filter((e) => e.animeId !== String(animeId))
+    latestCwRef.current = updated
     setUser((prev) => ({ ...prev, continueWatching: updated }))
+    cwWriteQueueRef.current = cwWriteQueueRef.current
+      .catch(() => {})
+      .then(() => updateDoc(doc(db, 'users', u.uid), { continueWatching: updated }))
   }, [])
 
   const addWatchMinutes = useCallback(async (minutes) => {

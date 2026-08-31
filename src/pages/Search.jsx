@@ -11,6 +11,7 @@ export default function SearchPage() {
   const [query, setQuery] = useState(initialQuery)
   const [results, setResults] = useState([])
   const [searching, setSearching] = useState(false)
+  const [errored, setErrored] = useState(false)
   const [trending, setTrending] = useState([])
 
   useEffect(() => {
@@ -26,13 +27,17 @@ export default function SearchPage() {
   }, [query, setSearchParams])
 
   const doSearch = useCallback(async (q) => {
-    if (!q.trim()) { setResults([]); return }
+    if (!q.trim()) { setResults([]); setErrored(false); return }
     setSearching(true)
     try {
       const data = await searchAnime(q.trim(), 1, 20)
       setResults(data.results)
+      setErrored(false)
     } catch {
+      // Distinguish "provider down" from "no matches" — during AniList outages
+      // an empty grid would otherwise read as a broken search.
       setResults([])
+      setErrored(true)
     } finally {
       setSearching(false)
     }
@@ -92,6 +97,14 @@ export default function SearchPage() {
                 <AnimeCard key={anime.id} anime={anime} />
               ))}
             </div>
+          ) : errored ? (
+            <div className="text-center py-20">
+              <SearchIcon className="w-16 h-16 text-gray-600 mx-auto mb-4" />
+              <p className="text-lg text-gray-300">Search is temporarily unavailable</p>
+              <p className="text-sm text-gray-500 mt-2">
+                Our anime metadata provider is having an outage. Please try again in a little while.
+              </p>
+            </div>
           ) : (
             <div className="text-center py-20">
               <SearchIcon className="w-16 h-16 text-gray-600 mx-auto mb-4" />
@@ -124,7 +137,11 @@ export default function SearchPage() {
                 to={`/genres/${genre.id}`}
                 className="flex items-center gap-3 p-4 rounded-xl border border-white/5 hover:bg-white/5 transition-all"
               >
-                <span className="text-2xl">{genre.icon}</span>
+                <img
+                  src={genre.image}
+                  alt={genre.name}
+                  className="w-10 h-10 rounded-full object-cover shrink-0"
+                />
                 <span className="text-sm font-medium text-white">{genre.name}</span>
               </Link>
             ))}

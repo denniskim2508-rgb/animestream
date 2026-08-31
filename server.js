@@ -45,6 +45,9 @@ const globalLimiter = rateLimit({
 // LLM-backed resolver is expensive per call; tight per-IP budget.
 const adaptationLimiter = rateLimit({ ...limiterOpts, limit: int('RATE_LIMIT_ADAPTATION', 10) })
 
+// On-demand AniList probe hits a live third party, so keep manual probes cheap.
+const healthProbeLimiter = rateLimit({ ...limiterOpts, limit: int('RATE_LIMIT_HEALTH_PROBE', 6) })
+
 // Provider stream resolution (per episode) — keep bursty seek/retry behavior sane.
 const streamLimiter = rateLimit({ ...limiterOpts, limit: int('RATE_LIMIT_STREAM', 60) })
 
@@ -54,6 +57,7 @@ const mediaProxyLimiter = rateLimit({ ...limiterOpts, limit: int('RATE_LIMIT_MED
 
 app.use('/api', globalLimiter)
 app.use('/api/manga/adaptation', adaptationLimiter)
+app.use('/api/health/providers/probe', healthProbeLimiter)
 app.use('/api/stream', streamLimiter)
 app.use('/api/media/proxy', mediaProxyLimiter)
 

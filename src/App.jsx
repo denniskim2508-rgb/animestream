@@ -1,7 +1,6 @@
 import { Routes, Route } from 'react-router-dom'
 import { useState, useEffect } from 'react'
-import Navbar from './components/layout/Navbar'
-import Footer from './components/layout/Footer'
+import AppShell from './components/layout/AppShell'
 import Home from './pages/Home'
 import Browse from './pages/Browse'
 import GenresIndex from './pages/GenresIndex'
@@ -25,21 +24,11 @@ import MangaDetail from './pages/MangaDetail'
 import MangaReader from './pages/MangaReader'
 import MangaSearch from './pages/MangaSearch'
 import AdminProviders from './pages/AdminProviders'
-import { SkeletonPage } from './components/ui/Skeleton'
-
-function PageLoader() {
-  return <SkeletonPage />
-}
-
-function Layout({ children }) {
-  return (
-    <>
-      <Navbar />
-      <main>{children}</main>
-      <Footer />
-    </>
-  )
-}
+import Movies from './pages/Movies'
+import MyList from './pages/MyList'
+import History from './pages/History'
+import TVApp from './tv/TVApp'
+import { TVFocusProvider } from './tv/TVFocusManager'
 
 export default function App() {
   const [loading, setLoading] = useState(true)
@@ -49,168 +38,49 @@ export default function App() {
     return () => clearTimeout(timer)
   }, [])
 
-  if (loading) return <PageLoader />
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-kx-bg flex items-center justify-center">
+        <div className="text-4xl font-black" style={{ fontFamily: 'Outfit', letterSpacing: '-0.03em' }}>
+          <span className="bg-gradient-to-r from-accent-light to-primary-light bg-clip-text text-transparent">KAISEN</span>
+          <span className="text-white">X</span>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <Routes>
-      <Route
-        path="/"
-        element={
-          <Layout>
-            <About />
-          </Layout>
-        }
-      />
-      <Route
-        path="/home"
-        element={
-          <Layout>
-            <Home />
-          </Layout>
-        }
-      />
-      <Route
-        path="/browse"
-        element={
-          <Layout>
-            <Browse />
-          </Layout>
-        }
-      />
-      <Route
-        path="/genres"
-        element={
-          <Layout>
-            <GenresIndex />
-          </Layout>
-        }
-      />
-      <Route
-        path="/genres/:genreId"
-        element={
-          <Layout>
-            <GenrePage />
-          </Layout>
-        }
-      />
-      <Route
-        path="/anime/:id"
-        element={
-          <Layout>
-            <AnimeDetail />
-          </Layout>
-        }
-      />
+      <Route path="/" element={<AppShell><Home /></AppShell>} />
+      <Route path="/home" element={<AppShell><Home /></AppShell>} />
+      <Route path="/browse" element={<AppShell><Browse /></AppShell>} />
+      <Route path="/movies" element={<AppShell><Movies /></AppShell>} />
+      <Route path="/genres" element={<AppShell><GenresIndex /></AppShell>} />
+      <Route path="/genres/:genreId" element={<AppShell><GenrePage /></AppShell>} />
+      <Route path="/anime/:id" element={<AppShell><AnimeDetail /></AppShell>} />
       <Route path="/watch/:animeId/:episode" element={<VideoPlayer />} />
-      <Route
-        path="/search"
-        element={
-          <Layout>
-            <SearchPage />
-          </Layout>
-        }
-      />
-      <Route path="/login" element={<Login />} />
-      <Route path="/signup" element={<Signup />} />
+      <Route path="/search" element={<AppShell><SearchPage /></AppShell>} />
+      <Route path="/login" element={<TVFocusProvider><Login /></TVFocusProvider>} />
+      <Route path="/signup" element={<TVFocusProvider><Signup /></TVFocusProvider>} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
-      <Route
-        path="/profile"
-        element={
-          <Layout>
-            <Profile />
-          </Layout>
-        }
-      />
-      <Route
-        path="/about"
-        element={
-          <Layout>
-            <About />
-          </Layout>
-        }
-      />
-      <Route
-        path="/notifications"
-        element={
-          <Layout>
-            <Notifications />
-          </Layout>
-        }
-      />
-      <Route
-        path="/settings"
-        element={
-          <Layout>
-            <Settings />
-          </Layout>
-        }
-      />
-      <Route
-        path="/terms"
-        element={
-          <Layout>
-            <TermsOfService />
-          </Layout>
-        }
-      />
-      <Route
-        path="/privacy"
-        element={
-          <Layout>
-            <PrivacyPolicy />
-          </Layout>
-        }
-      />
-      <Route
-        path="/dmca"
-        element={
-          <Layout>
-            <DMCA />
-          </Layout>
-        }
-      />
-      <Route
-        path="/help"
-        element={
-          <Layout>
-            <HelpCenter />
-          </Layout>
-        }
-      />
-      <Route
-        path="/manga"
-        element={
-          <Layout>
-            <MangaHome />
-          </Layout>
-        }
-      />
-      <Route
-        path="/manga/search"
-        element={
-          <Layout>
-            <MangaSearch />
-          </Layout>
-        }
-      />
-      <Route
-        path="/manga/:id"
-        element={
-          <Layout>
-            <MangaDetail />
-          </Layout>
-        }
-      />
+      <Route path="/profile" element={<AppShell><Profile /></AppShell>} />
+      <Route path="/my-list" element={<AppShell><MyList /></AppShell>} />
+      <Route path="/history" element={<AppShell><History /></AppShell>} />
+      <Route path="/about" element={<AppShell><About /></AppShell>} />
+      <Route path="/notifications" element={<AppShell><Notifications /></AppShell>} />
+      <Route path="/settings" element={<AppShell><Settings /></AppShell>} />
+      <Route path="/terms" element={<AppShell><TermsOfService /></AppShell>} />
+      <Route path="/privacy" element={<AppShell><PrivacyPolicy /></AppShell>} />
+      <Route path="/dmca" element={<AppShell><DMCA /></AppShell>} />
+      <Route path="/help" element={<AppShell><HelpCenter /></AppShell>} />
+      <Route path="/manga" element={<AppShell><MangaHome /></AppShell>} />
+      <Route path="/manga/search" element={<AppShell><MangaSearch /></AppShell>} />
+      <Route path="/manga/:id" element={<AppShell><MangaDetail /></AppShell>} />
       <Route path="/manga/:id/read/:chapterId" element={<MangaReader />} />
-      <Route
-        path="/admin/providers"
-        element={
-          <Layout>
-            <AdminProviders />
-          </Layout>
-        }
-      />
+      <Route path="/admin/providers" element={<AppShell><AdminProviders /></AppShell>} />
 
+      {/* ── Android TV / 10-foot UI ── */}
+      <Route path="/tv/*" element={<TVApp />} />
     </Routes>
   )
 }

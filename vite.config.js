@@ -27,8 +27,14 @@ export default defineConfig({
   plugins: [react(), tailwindcss(), startServerPlugin()],
   server: {
     open: '/about',
+    // Dedicated origin for AnimeStream; Travelverse uses 5174/4174 so the two
+    // apps never share a browser favicon cache key.
+    port: 5173,
     proxy: {
       '/api': 'http://localhost:3001',
     },
+  },
+  preview: {
+    port: 4173,
   },
 })

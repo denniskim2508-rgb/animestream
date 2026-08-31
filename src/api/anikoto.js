@@ -1,4 +1,4 @@
-const API_BASE = ''
+import { API_BASE } from './base'
 
 async function apiFetch(path) {
   const res = await fetch(`${API_BASE}${path}`)
@@ -42,11 +42,12 @@ export async function resolveStream(anilistId, episode, audioMode, provider) {
   return apiFetch(`/api/stream/resolve?${params}`)
 }
 
-export async function fetchEpisodeAvailability(anilistId, episode) {
+export async function fetchEpisodeAvailability(anilistId, episode, title) {
   const params = new URLSearchParams({
     anilistId: String(anilistId),
     episode: String(episode),
   })
+  if (title) params.set('title', String(title))
   return apiFetch(`/api/stream/availability?${params}`)
 }
 
@@ -55,7 +56,7 @@ export async function fetchRecentEpisodes() {
   return items.map(item => ({
     id: String(item.anilistId || item.id),
     title: item.title?.userPreferred || item.title?.english || item.title?.romaji || 'Unknown',
-    coverImage: item.coverImage?.large || item.coverImage?.medium || '',
+    coverImage: item.coverImage?.extraLarge || item.coverImage?.large || item.coverImage?.medium || '',
     episodes: item.episodes || 0,
     rating: item.averageScore || null,
     format: item.format || 'TV',

@@ -5,6 +5,8 @@
 
 import { fetchWithTimeout } from '../utils/http.js'
 import { cache } from '../cache/memoryCache.js'
+import { anilistGraphQL } from './anilistClient.js'
+import { getReanimeEpisodes } from './reanimeService.js'
 
 const ANIDAP_MAIN = 'https://anidap.lol'
 const ANIDAP_CHAD = 'https://chad.anidap.lol'
@@ -44,6 +46,40 @@ export async function getEpisodes(slug) {
   return ANIDAP_CACHE.cached(`episodes:${slug}`, () => anidapFetch(`${ANIDAP_CHAD}/rest/api/episodes?id=${slug}`))
 }
 
+// Normalize whatever shape the provider's episode endpoint returns into a flat,
+// ascending, deduped list of real episode numbers. Providers have been seen to
+// return unordered arrays, objects keyed by index, and string numbers; clients
+// must never compute next/previous from raw provider order.
+export function normalizeEpisodeNumbers(raw) {
+  const nums = new Set()
+  const items = Array.isArray(raw) ? raw : Array.isArray(raw?.data) ? raw.data : Array.isArray(raw?.episodes) ? raw.episodes : []
+  for (const item of items) {
+    let n = null
+    if (typeof item === 'number') n = item
+    else if (typeof item === 'string') n = parseFloat(item)
+    else if (item && typeof item === 'object') {
+      n = item.number ?? item.epNum ?? item.episode ?? item.ep ?? item.episodeNumber ?? item.number_episode ?? null
+      if (n == null && typeof item.title === 'string') {
+        const m = item.title.match(/(?:EP|Episode)\s*#?\s*(\d+(?:\.\d+)?)/i)
+        if (m) n = parseFloat(m[1])
+      }
+    }
+    if (n != null && Number.isFinite(Number(n)) && Number(n) > 0) nums.add(Number(n))
+  }
+  return [...nums].sort((a, b) => a - b)
+}
+
+// Real episode numbers for a slug (cached with the underlying episodes call).
+// Empty array when the provider has no usable list — callers fall back to 1..N.
+export async function getEpisodeNumbers(slug) {
+  try {
+    const raw = await getEpisodes(slug)
+    return normalizeEpisodeNumbers(raw)
+  } catch {
+    return []
+  }
+}
+
 export async function getServers(slug, epNum) {
   return ANIDAP_CACHE.singleFlight(`servers:${slug}:${epNum}`, () => anidapFetch(`${ANIDAP_CHAD}/rest/api/servers?id=${slug}&epNum=${epNum}`))
 }
@@ -59,15 +95,32 @@ export async function getRecents() {
   return data?.data?.data || data?.data || []
 }
 
-export async function checkAvailability(anilistId, episode) {
+export async function checkAvailability(anilistId, episode, title) {
   try {
     const details = await getAnimeDetails(anilistId)
     const slug = details?.data?.id
     if (!slug) return { hasSub: false, hasDub: false }
-    const servers = await getServers(slug, Number(episode))
+    const [servers, episodeList, reanime] = await Promise.all([
+      getServers(slug, Number(episode)),
+      getEpisodeNumbers(slug),
+      getReanimeEpisodes(anilistId, title),
+    ])
+    // Re:ANIME is the authoritative episode list when it has one (covers long
+    // shows like One Piece that anidap leaves empty). Reject anidap's bogus
+    // "1 episode = last aired" fallback when reanime gives the real count.
+    const useReanime = reanime.available && reanime.totalEpisodes > 0
+    const finalEps = useReanime && reanime.totalEpisodes > (episodeList.length || 0)
+      ? reanime.episodeList
+      : episodeList
     return {
-      hasSub: !!(servers.subProviders?.length),
-      hasDub: !!(servers.dubProviders?.length),
+      hasSub: !!(servers.subProviders?.length) || (useReanime && reanime.subbed),
+      hasDub: !!(servers.dubProviders?.length) || (useReanime && reanime.dubbed),
+      totalEpisodes: useReanime
+        ? reanime.totalEpisodes
+        : (details?.data?.episodeCount || details?.data?.episodes || 0),
+      // Provider's real episode numbers (normalized+sorted); [] when unknown.
+      episodeList: finalEps,
+      reanime: useReanime ? { totalEpisodes: reanime.totalEpisodes, subbed: reanime.subbed, dubbed: reanime.dubbed } : null,
     }
   } catch (err) {
     console.error(`[availability] Error: ${err.message}`)
@@ -182,6 +235,10 @@ export async function resolveStream({ anilistId, episode, audio = 'sub', provide
 
   const totalEpisodes = details?.data?.episodeCount || details?.data?.episodes || 0
 
+  // Real provider episode numbers so the client's next/previous logic works
+  // from the actual ordered list (1 → 2 → 3, never 1 → 3).
+  const [episodeList] = await Promise.all([getEpisodeNumbers(slug)])
+
   console.log(`[stream] ${slug} ep ${ep} ${type} via ${resolved.provider}: ${sourceUrl.substring(0, 80)}...`)
 
   return {
@@ -193,6 +250,7 @@ export async function resolveStream({ anilistId, episode, audio = 'sub', provide
     chapters: resolved.sources.chapters || [],
     episodeTitle,
     totalEpisodes,
+    episodeList,
     slug,
     hasSub: !!(servers.subProviders?.length),
     hasDub: type === 'dub' ? true : !!(servers.dubProviders?.length),
@@ -206,32 +264,12 @@ export async function resolveStream({ anilistId, episode, audio = 'sub', provide
 // client normalizes the raw media nodes exactly as it did when it fetched
 // AniList directly.
 
-const ANILIST_API = 'https://graphql.anilist.co'
 const HOME_CACHE = cache('anime:home', { ttlMs: 5 * 60 * 1000, maxEntries: 20 })
-
-// AniList GraphQL is heavier than the 5s default; still hard-capped so a hung
-// AniList can never stall the backend.
-const ANILIST_TIMEOUT_MS = 8000
-
-async function anilistFetch(query, variables, label) {
-  const res = await fetchWithTimeout(
-    ANILIST_API,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-      body: JSON.stringify({ query, variables }),
-    },
-    { provider: 'anilist', label, timeoutMs: ANILIST_TIMEOUT_MS }
-  )
-  const json = await res.json()
-  if (json.errors) throw new Error(json.errors[0].message)
-  return json.data
-}
 
 const MEDIA_FRAGMENT = `
   id
   title { romaji english native }
-  coverImage { large medium color }
+  coverImage { extraLarge large medium color }
   bannerImage
   description(asHtml: false)
   genres
@@ -272,7 +310,7 @@ function homeSections(perPage) {
     ['upcoming', homeQuery('POPULARITY_DESC', ', status: NOT_YET_RELEASED')],
   ].map(([name, query]) => [
     name,
-    anilistFetch(query, { page: 1, perPage }, `home:${name}`)
+    anilistGraphQL(query, { page: 1, perPage }, `home:${name}`)
       .then((d) => d?.Page?.media || null)
       .catch((err) => {
         console.error(`[anilist] home:${name} failed: ${err.message}`)

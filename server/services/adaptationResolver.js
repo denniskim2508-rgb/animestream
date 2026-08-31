@@ -12,6 +12,8 @@
 // Evidence sources, by weight:
 //   - AniList  (anime + source manga metadata: chapters, status, relations)
 //   - ANN      (episode count, adapted-from manga — relationship validation)
+//   - WDALO    ("Where Does The Anime Leave Off" — dedicated tracker, states
+//               the pickup chapter explicitly)
 //   - Fandom   (per-episode chapter coverage, when a wiki is discoverable)
 //   - Wikipedia("List of ... episodes" — supporting text)
 //   - Reddit   (community consensus — supporting evidence only, never the
@@ -19,8 +21,9 @@
 
 import { fetchWithTimeout } from '../utils/http.js'
 import { searchByName, normalizeTitle } from './annService.js'
+import { wdaloEvidence } from './wdaloService.js'
+import { anilistGraphQL } from './anilistClient.js'
 
-const ANILIST_API = 'https://graphql.anilist.co'
 const WIKI_API = 'https://en.wikipedia.org/w/api.php'
 const BROWSER_UA =
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36'
@@ -44,19 +47,16 @@ export function resolverEnabled() {
 }
 
 // ── AniList ────────────────────────────────────────────────────
-async function anilistFetch(query, variables, label) {
-  const res = await fetchWithTimeout(
-    ANILIST_API,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-      body: JSON.stringify({ query, variables }),
-    },
-    { provider: 'anilist', label, timeoutMs: 8000 }
-  )
-  const json = await res.json()
-  if (json.errors) throw new Error(json.errors[0].message)
-  return json.data
+// All AniList requests go through the shared anilistClient (correct endpoint,
+// headers incl. User-Agent, timeout, stats + circuit breaker).
+export function anilistAnime(anilistId) {
+  return anilistGraphQL(ANIME_QUERY, { id: Number(anilistId) }, `resolver:anime:${anilistId}`)
+    .then((d) => d?.Media || null)
+}
+
+export function anilistManga(mangaId) {
+  return anilistGraphQL(MANGA_QUERY, { id: Number(mangaId) }, `resolver:manga:${mangaId}`)
+    .then((d) => d?.Media || null)
 }
 
 const ANIME_QUERY = `
@@ -64,6 +64,8 @@ const ANIME_QUERY = `
     Media(id: $id, type: ANIME) {
       title { romaji english }
       episodes
+      season
+      seasonYear
       status
       format
       relations { edges { relationType node { id type format title { romaji english } } } }
@@ -79,16 +81,6 @@ const MANGA_QUERY = `
       status
     }
   }`
-
-export async function anilistAnime(anilistId) {
-  const data = await anilistFetch(ANIME_QUERY, { id: Number(anilistId) }, `resolver:anime:${anilistId}`)
-  return data?.Media || null
-}
-
-export async function anilistManga(mangaId) {
-  const data = await anilistFetch(MANGA_QUERY, { id: Number(mangaId) }, `resolver:manga:${mangaId}`)
-  return data?.Media || null
-}
 
 function titleOf(media) {
   return media?.title?.english || media?.title?.romaji || null
@@ -230,8 +222,11 @@ Hard rules:
 - If NO source explicitly states which chapters the episode (or the anime's coverage) adapts, return nextChapter null and confidence "low".
 - If the anime has fully adapted the manga (no chapters remain), set nextChapter null and mangaFullyAdapted true.
 - If sources contradict each other, set conflict true and confidence at most "medium".
+- "Where Does The Anime Leave Off" is a dedicated tracker for exactly this question; treat its explicit chapter/volume statements as strong evidence.
+- Evidence may state the pickup per season (e.g. "If you finished the Season 1 anime — you can start at Volume 7, Chapter 61."). Use the line matching the season that contains the episode being resolved; anime.finale is true when the episode is the season finale.
+- If a source names a pickup volume alongside the chapter (e.g. "Volume 7, Chapter 61"), set startVolume to that volume number.
 - Fandom wikis are the strongest evidence; community posts (reddit) are supporting evidence only and alone are not enough for "high".
-Respond with JSON only: {"nextChapter": int|null, "lastAdaptedChapter": int|null, "isFiller": bool, "mangaFullyAdapted": bool, "conflict": bool, "confidence": "high"|"medium"|"low", "evidenceQuotes": [{"source": string, "url": string|null, "quote": string}], "reasoning": string}`
+Respond with JSON only: {"nextChapter": int|null, "startVolume": int|null, "lastAdaptedChapter": int|null, "isFiller": bool, "mangaFullyAdapted": bool, "conflict": bool, "confidence": "high"|"medium"|"low", "evidenceQuotes": [{"source": string, "url": string|null, "quote": string}], "reasoning": string}`
 
 async function askLlm(bundle) {
   const res = await fetchWithTimeout(
@@ -286,6 +281,17 @@ export function quoteSupports(quotes, nextChapter) {
   })
 }
 
+// The pickup volume, taken only from quotes that survived verbatim
+// verification (e.g. "you can start at Volume 7, Chapter 61."). Deterministic
+// and grounded in the source text rather than the LLM's own numbers.
+export function extractVolume(quotes) {
+  for (const q of quotes || []) {
+    const m = q.quote.match(/volume\s+(\d+)/i)
+    if (m) return Number(m[1])
+  }
+  return null
+}
+
 export function assessConfidence(parsed, quotes, manga) {
   let confidence = parsed.confidence
 
@@ -317,6 +323,7 @@ export async function resolveAdaptation(anilistId, episode) {
     fandomEvidence(title, episode),
     wikipediaEvidence(title),
     redditEvidence(title, episode),
+    wdaloEvidence(title, mangaRel?.format),
   ])
   for (const r of fetchResults) if (r.status === 'fulfilled' && r.value) sources.push(r.value)
 
@@ -325,6 +332,9 @@ export async function resolveAdaptation(anilistId, episode) {
       anilistId: Number(anilistId),
       title,
       episodes: anime.episodes ?? null,
+      season: anime.season ?? null,
+      seasonYear: anime.seasonYear ?? null,
+      finale: anime.episodes != null && Number(episode) >= anime.episodes,
       status: anime.status ?? null,
       format: anime.format ?? null,
     },
@@ -349,9 +359,26 @@ export async function resolveAdaptation(anilistId, episode) {
 
   const verified = verifyQuotes(parsed.evidenceQuotes, sources)
   const confidence = assessConfidence(parsed, verified, manga)
+  const volume = extractVolume(verified) ?? parsed.startVolume ?? null
+
+  // Debug trace for one exact case: Frieren episode 28 (S1 finale) and any
+  // other season-finale episode. Logs only non-secret identifiers/numbers.
+  {
+    const wdalo = sources.find((s) => s.name === 'wheredoestheanimeleaveoff')
+    const wdaloPickups = wdalo
+      ? [...wdalo.text.matchAll(/volume\s+(\d+),\s*chapter\s+(\d+)/gi)].map((m) => `V${m[1]}C${m[2]}`)
+      : []
+    const finale = anime.episodes != null && Number(episode) >= anime.episodes
+    console.log(
+      `[resolver:debug] animeId=${anilistId} | episode=${episode} | title="${title}" | ` +
+        `season=${anime.season ?? '?'} ${anime.seasonYear ?? ''} | episodes=${anime.episodes ?? '?'} | finale=${finale} | ` +
+        `wdalo=${wdalo ? wdalo.url : 'none'} | wdaloPickups=[${wdaloPickups.join(', ')}] | ` +
+        `extractedVolume=${volume ?? '-'} | extractedChapter=${parsed.nextChapter ?? '-'} | confidence=${confidence}`
+    )
+  }
 
   console.log(
-    `[resolver] animeId=${anilistId} ep=${episode} "${title}" -> next=${parsed.nextChapter ?? '-'} confidence=${confidence} quotes=${verified.length}/${(parsed.evidenceQuotes || []).length} conflict=${parsed.conflict}`
+    `[resolver] animeId=${anilistId} ep=${episode} "${title}" -> next=${parsed.nextChapter ?? '-'} volume=${volume ?? '-'} confidence=${confidence} quotes=${verified.length}/${(parsed.evidenceQuotes || []).length} conflict=${parsed.conflict}`
   )
 
   if (confidence !== 'high') {
@@ -374,6 +401,7 @@ export async function resolveAdaptation(anilistId, episode) {
       series: null,
       lastAdaptedChapter: parsed.lastAdaptedChapter ?? null,
       nextChapter: parsed.nextChapter ?? null,
+      volume,
       filler: Boolean(parsed.isFiller),
       previousCanonEpisode: null,
       mangaFullyAdapted: Boolean(parsed.mangaFullyAdapted),

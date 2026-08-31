@@ -1,3 +1,5 @@
+import { API_BASE } from './base'
+
 const ANILIST_API = 'https://graphql.anilist.co'
 
 async function anilistFetch(query, variables = {}) {
@@ -21,7 +23,7 @@ async function anilistFetch(query, variables = {}) {
 const MEDIA_FRAGMENT = `
   id
   title { romaji english native }
-  coverImage { large medium color }
+  coverImage { extraLarge large medium color }
   bannerImage
   description(asHtml: false)
   genres
@@ -42,20 +44,53 @@ const MEDIA_FRAGMENT = `
   studios(isMain: true) { nodes { name } }
 `
 
-// The homepage rows now come from the backend (/api/anime/home), which runs the
+// The homepage rows normally come from the backend (/api/anime/home), which runs the
 // six AniList queries server-side with a 5-minute cache + single-flight. The
 // raw media nodes are normalized here exactly as before, so callers see an
 // unchanged shape.
-export async function fetchHomepageData(perPage = 10) {
-  const res = await fetch(`/api/anime/home?perPage=${perPage}`)
-  if (!res.ok) throw new Error(`Anime home fetch failed: ${res.status}`)
-  const data = await res.json()
-  const rows = ['trending', 'topRated', 'popular', 'recentlyUpdated', 'newReleases', 'upcoming']
+//
+// Fallback: AniList's Cloudflare sometimes 403s non-browser clients ("temporarily
+// disabled due to severe stability issues") while browser requests sail through.
+// When the backend answers with every section empty, re-run the same queries
+// directly from the client so the homepage survives those blocks.
+const HOME_FALLBACK = [
+  ['trending', fetchTrendingAnime],
+  ['topRated', fetchTopRatedAnime],
+  ['popular', fetchPopularAnime],
+  ['recentlyUpdated', fetchRecentlyUpdated],
+  ['newReleases', fetchNewReleases],
+  ['upcoming', fetchTopUpcoming],
+]
+
+async function fetchHomepageDataDirect(perPage) {
+  const settled = await Promise.allSettled(HOME_FALLBACK.map(([, fn]) => fn(1, perPage)))
   const out = {}
-  for (const key of rows) {
-    out[key] = (data[key] || []).map(normalizeMedia)
+  for (let i = 0; i < HOME_FALLBACK.length; i += 1) {
+    out[HOME_FALLBACK[i][0]] = settled[i].status === 'fulfilled' ? settled[i].value : []
+  }
+  if (Object.values(out).every((rows) => !rows || rows.length === 0)) {
+    throw new Error('Homepage unavailable: backend and direct AniList both failed')
   }
   return out
+}
+
+export async function fetchHomepageData(perPage = 10) {
+  try {
+    const res = await fetch(`${API_BASE}/api/anime/home?perPage=${perPage}`)
+    if (!res.ok) throw new Error(`Anime home fetch failed: ${res.status}`)
+    const data = await res.json()
+    const rows = ['trending', 'topRated', 'popular', 'recentlyUpdated', 'newReleases', 'upcoming']
+    const out = {}
+    for (const key of rows) {
+      out[key] = (data[key] || []).map(normalizeMedia)
+    }
+    if (Object.values(out).some((list) => list.length > 0)) return out
+    // Backend reachable but all sections empty → upstream block; go direct.
+    return await fetchHomepageDataDirect(Number(perPage))
+  } catch {
+    // Network-level failure of the backend itself → also try direct.
+    return fetchHomepageDataDirect(Number(perPage))
+  }
 }
 
 export async function fetchTrendingAnime(page = 1, perPage = 10) {
@@ -305,15 +340,17 @@ export async function fetchRecommendations(id) {
 }
 
 function normalizeMedia(media) {
+  const hiCover = media.coverImage.extraLarge || media.coverImage.large
   return {
     id: media.id,
     title: media.title.english || media.title.romaji,
     japaneseTitle: media.title.native,
     romajiTitle: media.title.romaji,
     description: (media.description || '').replace(/<[^>]*>/g, '').replace(/\n/g, ' ').trim(),
-    coverImage: media.coverImage.large,
+    coverImage: hiCover,
     coverImageSmall: media.coverImage.medium,
-    bannerImage: media.bannerImage || media.coverImage.large,
+    coverImageExtra: media.coverImage.extraLarge || hiCover,
+    bannerImage: media.bannerImage || null,
     bannerColor: media.coverImage.color,
     genres: (media.genres || []).map((g) => g.toLowerCase().replace(/ /g, '')),
     genresRaw: media.genres || [],

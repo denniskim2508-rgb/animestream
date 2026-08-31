@@ -2,10 +2,11 @@ import { useState, useEffect } from 'react'
 import { Link, Navigate } from 'react-router-dom'
 import {
   ArrowLeft, Palette, Globe, Eye, EyeOff, User, Mail, Lock,
-  Save, CheckCircle, LogOut, Monitor, SkipForward, AlertTriangle,
+  Save, CheckCircle, LogOut, Monitor, SkipForward, AlertTriangle, Bell,
 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { THEMES } from '../data/themes'
+import { loadNotificationPrefs, saveNotificationPrefs } from '../utils/notificationPrefs'
 
 const LANGUAGES = [
   { code: 'en', label: 'English' },
@@ -37,6 +38,7 @@ function applySettings(settings) {
 export default function Settings() {
   const { user, logout, resetPassword, updateProfileField, accent, setAccent } = useAuth()
   const [settings, setSettings] = useState(() => getSettings())
+  const [notifPrefs, setNotifPrefs] = useState(() => loadNotificationPrefs())
   const [name, setName] = useState(user?.name || '')
   const [saved, setSaved] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
@@ -56,6 +58,12 @@ export default function Settings() {
     const updated = { ...settings, language: code }
     setSettings(updated)
     saveSettings(updated)
+  }
+
+  const handleNotifToggle = (key) => {
+    const updated = { ...notifPrefs, [key]: !notifPrefs[key] }
+    setNotifPrefs(updated)
+    saveNotificationPrefs(updated)
   }
 
   const handleSaveName = async () => {
@@ -254,6 +262,50 @@ export default function Settings() {
                 {lang.label}
               </button>
             ))}
+          </div>
+        </section>
+
+        <section className="bg-surface rounded-2xl border border-white/5 p-6">
+          <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+            <Bell className="w-5 h-5 text-primary" /> Notifications
+          </h2>
+          <div className="space-y-4">
+            {[
+              { key: 'pushEnabled', title: 'Push Notifications', desc: 'Allow Kaizen X to send notifications' },
+              { key: 'newEpisodeAlerts', title: 'New Episode Alerts', desc: "Get notified when an anime in your list has a new ep." },
+              { key: 'airingReminders', title: 'Airing Reminders', desc: 'Get reminded before an episode starts' },
+              { key: 'myListUpdates', title: 'My List Updates', desc: "Updates about anime you've saved" },
+              { key: 'continueWatchingReminders', title: 'Continue Watching', desc: 'Reminders about unfinished episodes' },
+              { key: 'appAnnouncements', title: 'App Announcements', desc: 'Important Kaizen X news and updates' },
+            ].map(({ key, title, desc }, idx) => {
+              const gated = idx > 0 && !notifPrefs.pushEnabled
+              const on = notifPrefs[key]
+              return (
+                <div
+                  key={key}
+                  className={`flex items-center justify-between ${gated ? 'opacity-40' : ''}`}
+                >
+                  <div className="flex items-center gap-3">
+                    <Bell className="w-5 h-5 text-gray-400" />
+                    <div>
+                      <p className="text-sm font-medium text-white">{title}</p>
+                      <p className="text-xs text-gray-500">{desc}</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => { if (!gated) handleNotifToggle(key) }}
+                    disabled={gated}
+                    className={`relative w-11 h-6 rounded-full transition-colors ${on ? 'bg-primary' : 'bg-white/10'}`}
+                  >
+                    <span
+                      className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full transition-transform ${
+                        on ? 'translate-x-5' : ''
+                      }`}
+                    />
+                  </button>
+                </div>
+              )
+            })}
           </div>
         </section>
 

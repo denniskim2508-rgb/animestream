@@ -27,9 +27,16 @@ export async function findMangaForAnime(anilistRelations, animeTitle) {
 
     let latestChapter = null
     try {
-      const chRes = await getMangaChapters(match.id, 'en', 1)
-      if (chRes.data?.length) {
-        latestChapter = chRes.data[0].chapter
+      // Providers return chapters sorted ascending (chapter 1 first), so the
+      // newest chapter is the last one — fetch the final page, not data[0].
+      const first = await getMangaChapters(match.id, 'en', 1)
+      const total = Number(first.total) || 0
+      if (total > 1) {
+        const last = await getMangaChapters(match.id, 'en', 1, total - 1)
+        latestChapter = Number(last.data?.[0]?.chapter) || null
+      }
+      if (latestChapter == null && first.data?.length) {
+        latestChapter = Number(first.data[0].chapter) || null
       }
     } catch {}
 

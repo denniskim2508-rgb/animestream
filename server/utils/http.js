@@ -1,7 +1,17 @@
 // fetch() wrapper used by every provider: hard request timeout, optional retry
-// on 429/5xx, and per-provider stats + log lines (provider, endpoint, response
-// time, success/failure, HTTP status). A hung provider now aborts after
-// `timeoutMs` instead of blocking the whole request merge forever.
+// on 429/5xx, and per-provider stats + log lines (timestamp, method, provider,
+// endpoint hostname, response time, success/failure, HTTP status, error). A
+// hung provider now aborts after `timeoutMs` instead of blocking the whole
+// request merge forever.
+//
+// An alternate transport (e.g. one with a browser-like TLS fingerprint for
+// Cloudflare-gated upstreams) can be supplied as options.http; it must be
+// fetch-shaped: (url, { headers, signal }) -> Response-like { ok, status, ... }.
+//
+// Logging rule: only provider name, endpoint hostname/path, method, status,
+// timing, and error text are ever logged. Query strings (which can carry signed
+// or provider-specific tokens) are stripped from logged endpoints, and no
+// headers, cookies, or credentials are ever logged.
 
 import { record } from './stats.js'
 
@@ -36,9 +46,20 @@ function breakerSuccess(name) {
   breaker.delete(name)
 }
 
-function shortUrl(url) {
-  const s = String(url || '')
-  return s.length > 100 ? `${s.slice(0, 97)}...` : s
+function ts() {
+  return new Date().toISOString()
+}
+
+// Logged endpoint = hostname + path only. Query strings may carry signed URLs /
+// provider tokens, so they are stripped from every log line.
+function loggedEndpoint(url) {
+  try {
+    const u = new URL(String(url || ''), 'http://localhost')
+    return `${u.hostname}${u.pathname === '/' ? '' : u.pathname}`
+  } catch {
+    const s = String(url || '')
+    return s.length > 100 ? `${s.slice(0, 97)}...` : s
+  }
 }
 
 function sleep(ms) {
@@ -55,8 +76,9 @@ function buildSignal(userSignal, timeoutMs) {
 }
 
 // Fetch `url` and never wait longer than `timeoutMs`. Non-2xx responses throw
-// (after optional retries for 429/5xx); every attempt is recorded in stats and
-// logged with the provider name, endpoint, response time, and outcome.
+// (after optional retries for 429/5xx); the upstream's own reply (truncated) is
+// captured so the real reason is visible in stats, not just the status code.
+// Every attempt is recorded in stats and logged.
 export async function fetchWithTimeout(url, opts = {}, options = {}) {
   const {
     provider = 'unknown',
@@ -67,7 +89,9 @@ export async function fetchWithTimeout(url, opts = {}, options = {}) {
     allowNonOk = false,
     breaker: useBreaker = true,
   } = options
-  const endpoint = label || shortUrl(url)
+  const endpoint = label || loggedEndpoint(url)
+  const method = (opts.method || 'GET').toUpperCase()
+  const doFetch = options.http || fetch
   let lastErr
 
   if (useBreaker && provider !== 'unknown') {
@@ -76,8 +100,8 @@ export async function fetchWithTimeout(url, opts = {}, options = {}) {
       const err = new Error(`${provider} circuit open (skipped after ${st.streak} failures)`)
       err.code = 'ECIRCUITOPEN'
       err.provider = provider
-      record(provider, { ms: 0, ok: false, timeout: false, error: err.message })
-      console.log(`[http] ${provider} | ${endpoint} | SKIP (circuit open)`)
+      record(provider, { ms: 0, ok: false, timeout: false, error: err.message, code: 'ECIRCUITOPEN' })
+      console.log(`[http] ${ts()} ${method} ${provider} | ${endpoint} | SKIP (circuit open)`)
       throw err
     }
   }
@@ -85,29 +109,37 @@ export async function fetchWithTimeout(url, opts = {}, options = {}) {
   for (let attempt = 0; attempt <= retries; attempt++) {
     const attemptStart = Date.now()
     try {
-      const res = await fetch(url, { ...opts, signal: buildSignal(opts.signal, timeoutMs) })
+      const res = await doFetch(url, { ...opts, signal: buildSignal(opts.signal, timeoutMs) })
       const ms = Date.now() - attemptStart
       if (!res.ok && !allowNonOk) {
-        record(provider, { ms, ok: false, status: res.status, error: res.statusText })
-        console.log(`[http] ${provider} | ${endpoint} | HTTP ${res.status} in ${ms}ms`)
+        // Capture the upstream's own error body so e.g. AniList's real 403
+        // outage message surfaces instead of a bare status code.
+        let snippet = ''
+        try {
+          snippet = (await res.text()).replace(/\s+/g, ' ').slice(0, 160).trim()
+        } catch { /* body unreadable, fall back to status text */ }
+        const detail = snippet || res.statusText || ''
+        record(provider, { ms, ok: false, status: res.status, error: detail, code: `HTTP ${res.status}` })
+        console.log(`[http] ${ts()} ${method} ${provider} | ${endpoint} | HTTP ${res.status} in ${ms}ms | ${detail}`)
         const retriable = res.status === 429 || res.status >= 500
         if (retriable && attempt < retries) {
           await sleep(retryDelayMs * (attempt + 1))
           continue
         }
-        lastErr = new Error(`${provider} HTTP ${res.status}: ${res.statusText}`)
+        lastErr = new Error(`${provider} HTTP ${res.status}: ${detail || res.statusText}`)
+        lastErr.code = `HTTP ${res.status}`
         if (useBreaker) breakerFail(provider)
-        throw lastErr
+        break // already recorded + logged; don't fall into the catch below
       }
       if (useBreaker) breakerSuccess(provider)
       record(provider, { ms, ok: true, status: res.status })
-      console.log(`[http] ${provider} | ${endpoint} | 200 in ${ms}ms`)
+      console.log(`[http] ${ts()} ${method} ${provider} | ${endpoint} | HTTP ${res.status} in ${ms}ms`)
       return res
     } catch (err) {
       const ms = Date.now() - attemptStart
       const isTimeout = err?.name === 'TimeoutError' || /abort/i.test(err?.message || '')
-      record(provider, { ms, ok: false, timeout: isTimeout, error: err.message })
-      console.log(`[http] ${provider} | ${endpoint} | ${isTimeout ? 'TIMEOUT' : 'FAIL'} in ${ms}ms | ${err.message}`)
+      record(provider, { ms, ok: false, timeout: isTimeout, error: err.message, code: isTimeout ? 'ETIMEDOUT' : err?.code })
+      console.log(`[http] ${ts()} ${method} ${provider} | ${endpoint} | ${isTimeout ? 'TIMEOUT' : 'FAIL'} in ${ms}ms | ${err.message}`)
       lastErr = err
       if (attempt < retries && !isTimeout && err?.name !== 'AbortError') {
         await sleep(retryDelayMs * (attempt + 1))

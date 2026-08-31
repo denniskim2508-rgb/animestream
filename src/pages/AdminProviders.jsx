@@ -14,6 +14,7 @@ import {
   Loader2,
 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
+import { API_BASE } from '../api/base'
 
 const PROVIDER_NAMES = {
   mangadex: 'MangaDex',
@@ -40,23 +41,34 @@ function successRateOf(p) {
   return (1 - p.failures / p.calls) * 100
 }
 
+// Server-side classification is the single source of truth (stats.js `class`),
+// so threshold tweaks stay in one place. Kitsu still reads as a neutral
+// "metadata only" badge when healthy since it has no reader.
 function statusOf(p) {
+  if (p.class) {
+    if (METADATA_ONLY.has(p.name) && p.class === 'healthy') return 'meta'
+    return p.class
+  }
+  // Legacy fallback for older servers that don't send `class` yet.
   if (!p.calls) return 'none'
-  if (METADATA_ONLY.has(p.name)) return 'meta'
   const rate = successRateOf(p)
-  if (rate < 90 || p.avgMs >= 5000 || (p.calls >= 4 && p.timeouts / p.calls > 0.2)) return 'critical'
-  if (rate < 97 || p.avgMs >= 1500 || p.lastStatus === 429) return 'warning'
-  return 'healthy'
+  if (rate < 90 || p.avgMs >= 5000 || (p.calls >= 4 && p.timeouts / p.calls > 0.2)) return 'unhealthy'
+  if (rate < 97 || p.avgMs >= 1500) return 'degraded'
+  return METADATA_ONLY.has(p.name) ? 'meta' : 'healthy'
 }
 
-const STATUS_ORDER = { healthy: 0, meta: 1, warning: 2, critical: 3, none: 4 }
+const STATUS_ORDER = { healthy: 0, meta: 1, degraded: 2, rate_limited: 3, unhealthy: 4, server_error: 5, forbidden: 6, timeout: 7, none: 8 }
 
 const STATUS_META = {
-  healthy: { icon: CheckCircle2, color: 'text-emerald-400', bg: 'bg-emerald-500/10', ring: 'border-emerald-500/25', label: 'Healthy' },
-  meta: { icon: Server, color: 'text-sky-400', bg: 'bg-sky-500/10', ring: 'border-sky-500/25', label: 'Metadata only' },
-  warning: { icon: AlertTriangle, color: 'text-amber-400', bg: 'bg-amber-500/10', ring: 'border-amber-500/25', label: 'Slow / flaky' },
-  critical: { icon: XCircle, color: 'text-red-400', bg: 'bg-red-500/10', ring: 'border-red-500/25', label: 'Unhealthy' },
-  none: { icon: Wifi, color: 'text-gray-500', bg: 'bg-white/5', ring: 'border-white/10', label: 'No data yet' },
+  healthy: { icon: CheckCircle2, color: 'text-emerald-400', bg: 'bg-emerald-500/10', ring: 'border-emerald-500/25', label: 'Healthy', bar: 'bg-emerald-400' },
+  meta: { icon: Server, color: 'text-sky-400', bg: 'bg-sky-500/10', ring: 'border-sky-500/25', label: 'Metadata only', bar: 'bg-sky-400' },
+  degraded: { icon: AlertTriangle, color: 'text-amber-400', bg: 'bg-amber-500/10', ring: 'border-amber-500/25', label: 'Slow / flaky', bar: 'bg-amber-400' },
+  rate_limited: { icon: AlertTriangle, color: 'text-orange-400', bg: 'bg-orange-500/10', ring: 'border-orange-500/25', label: 'Rate limited', bar: 'bg-orange-400' },
+  unhealthy: { icon: XCircle, color: 'text-red-400', bg: 'bg-red-500/10', ring: 'border-red-500/25', label: 'Unhealthy', bar: 'bg-red-400' },
+  server_error: { icon: XCircle, color: 'text-red-400', bg: 'bg-red-500/10', ring: 'border-red-500/25', label: 'Server error', bar: 'bg-red-400' },
+  forbidden: { icon: ShieldAlert, color: 'text-red-400', bg: 'bg-red-500/10', ring: 'border-red-500/40', label: 'Forbidden', bar: 'bg-red-400' },
+  timeout: { icon: Clock, color: 'text-red-400', bg: 'bg-red-500/10', ring: 'border-red-500/25', label: 'Timed out', bar: 'bg-red-400' },
+  none: { icon: Wifi, color: 'text-gray-500', bg: 'bg-white/5', ring: 'border-white/10', label: 'No data yet', bar: 'bg-sky-400' },
 }
 
 function fmtMs(ms) {
@@ -128,7 +140,7 @@ function ProviderCard({ p }) {
         </div>
         <div className="h-1.5 rounded-full bg-white/5 overflow-hidden">
           <div
-            className={`h-full rounded-full ${status === 'healthy' ? 'bg-emerald-400' : status === 'warning' ? 'bg-amber-400' : status === 'critical' ? 'bg-red-400' : 'bg-sky-400'}`}
+            className={`h-full rounded-full ${meta.bar}`}
             style={{ width: `${Math.max(rate || 0, 2)}%` }}
           />
         </div>
@@ -150,6 +162,7 @@ function ProviderCard({ p }) {
         <p className="flex items-center gap-1.5">
           <Activity className="w-3.5 h-3.5 shrink-0" />
           status: {p.lastStatus != null ? `HTTP ${p.lastStatus}` : '—'}
+          {p.lastErrorCode && ` · ${p.lastErrorCode}`}
           {p.failures > 0 && ` · ${p.failures} failures`}
         </p>
         {p.lastError && (
@@ -169,13 +182,15 @@ export default function AdminProviders() {
   const [error, setError] = useState(null)
   const [autoRefresh, setAutoRefresh] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
+  const [probing, setProbing] = useState(false)
+  const [probeResult, setProbeResult] = useState(null)
   const [lastUpdated, setLastUpdated] = useState(null)
   const pollRef = useRef(null)
 
   const load = async () => {
     setRefreshing(true)
     try {
-      const res = await fetch('/api/health/providers')
+      const res = await fetch(`${API_BASE}/api/health/providers`)
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
       const json = await res.json()
       setData(json)
@@ -185,6 +200,26 @@ export default function AdminProviders() {
       setError(err.message)
     } finally {
       setRefreshing(false)
+    }
+  }
+
+  // Force a live AniList check so a fix can be verified without waiting for
+  // organic traffic. The probe records into the same stats, then returns the
+  // fresh snapshot so the dashboard updates in one round-trip.
+  const runProbe = async () => {
+    setProbing(true)
+    setProbeResult(null)
+    try {
+      const res = await fetch(`${API_BASE}/api/health/providers/probe`, { method: 'POST' })
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      const json = await res.json()
+      setProbeResult([json.probe])
+      setData(json)
+      setLastUpdated(new Date())
+    } catch (err) {
+      setProbeResult([{ provider: 'anilist', ok: false, ms: 0, error: err.message }])
+    } finally {
+      setProbing(false)
     }
   }
 
@@ -232,8 +267,7 @@ export default function AdminProviders() {
     return s !== 0 ? s : (a.avgMs || 0) - (b.avgMs || 0)
   })
   const summary = data?.summary
-  const degraded = summary?.degraded?.length || 0
-  const unstable = summary?.unstable?.length || 0
+  const attention = summary?.attention?.length || 0
 
   return (
     <div className="min-h-screen bg-gray-950 pt-24 pb-16 px-4 sm:px-6 lg:px-8 max-w-[1100px] mx-auto">
@@ -255,6 +289,15 @@ export default function AdminProviders() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <button
+            onClick={runProbe}
+            disabled={probing}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-amber-200 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/25 rounded-lg transition-colors disabled:opacity-50"
+            title="Send a live request to AniList and record the result"
+          >
+            <Activity className={`w-3.5 h-3.5 ${probing ? 'animate-pulse' : ''}`} />
+            {probing ? 'Probing…' : 'Probe AniList'}
+          </button>
           <button
             onClick={() => setAutoRefresh((v) => !v)}
             className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${
@@ -281,18 +324,40 @@ export default function AdminProviders() {
         </div>
       )}
 
-      {(degraded > 0 || unstable > 0) && (
+      {probeResult && (
+        <div className={`mb-6 p-4 rounded-xl border ${probeResult.some((r) => !r.ok) ? 'border-red-500/25 bg-red-500/10' : 'border-emerald-500/25 bg-emerald-500/10'}`}>
+          <p className="text-sm font-semibold text-white flex items-center gap-2">
+            <Activity className="w-4 h-4 text-primary" />
+            Live probe
+          </p>
+          <ul className="mt-1 text-sm text-gray-300 space-y-0.5">
+            {probeResult.map((r) => (
+              <li key={r.provider}>
+                · {providerLabel(r.provider)} —{' '}
+                {r.ok ? (
+                  <span className="text-emerald-300">reachable in {fmtMs(r.ms)}</span>
+                ) : (
+                  <span className="text-red-300">failed after {fmtMs(r.ms)} — {r.error}</span>
+                )}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {attention > 0 && (
         <div className="mb-6 p-4 rounded-xl border border-amber-500/25 bg-amber-500/10">
           <p className="text-sm font-semibold text-amber-300 flex items-center gap-2">
             <AlertTriangle className="w-4 h-4" />
             Attention needed
           </p>
           <ul className="mt-1 text-sm text-amber-200/80 space-y-0.5">
-            {summary.degraded.map((p) => (
-              <li key={p.name}>· {providerLabel(p.name)} — last status {p.lastStatus}</li>
-            ))}
-            {summary.unstable.map((p) => (
-              <li key={p.name}>· {providerLabel(p.name)} — {p.failures}/{p.calls} requests failing</li>
+            {summary.attention.map((p) => (
+              <li key={p.name}>
+                · {providerLabel(p.name)} — {p.diagnostic}
+                {p.lastStatus != null ? ` · HTTP ${p.lastStatus}` : ''}
+                {p.lastError ? ` · ${p.lastError}` : p.calls ? ` · ${p.failures}/${p.calls} requests failing` : ''}
+              </li>
             ))}
           </ul>
         </div>

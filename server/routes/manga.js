@@ -184,10 +184,11 @@ router.get('/adaptation', async (req, res) => {
         lastAdaptedChapter: outcome.result.lastAdaptedChapter,
         filler: outcome.result.filler,
         animeTitle: outcome.result.animeTitle,
+        volume: outcome.result.volume ?? null,
         source: `ai:${outcome.confidence}`,
       })
       console.log(
-        `[manga] adaptation | animeId=${animeId} | episode=${episode} | saved via AI resolver (confidence=${outcome.confidence}, nextChapter=${outcome.result.nextChapter ?? 'none'})`
+        `[manga] adaptation | animeId=${animeId} | episode=${episode} | saved via AI resolver (confidence=${outcome.confidence}, nextChapter=${outcome.result.nextChapter ?? 'none'}, volume=${outcome.result.volume ?? '-'})`
       )
       return res.json({ ...outcome.result, source: 'store' })
     }

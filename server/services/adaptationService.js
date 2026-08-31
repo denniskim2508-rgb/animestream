@@ -64,6 +64,7 @@ export function saveAdaptation(animeId, episode, fields = {}) {
     animeTitle: series?.title || fields.animeTitle || String(anilistId),
     lastAdaptedChapter: fields.lastAdaptedChapter ?? null,
     nextChapter: fields.nextChapter ?? null,
+    volume: fields.volume ?? null,
     filler: Boolean(fields.filler),
     previousCanonEpisode: fields.previousCanonEpisode ?? null,
     source: fields.source || 'manual',
@@ -98,6 +99,7 @@ export function getAdaptation(animeId, episode) {
           episode: epNum,
           lastAdaptedChapter: entry.filler ? null : entry.lastChapter,
           nextChapter: entry.nextChapter,
+          volume: entry.volume ?? null,
           filler: entry.filler,
         }
         if (entry.filler) {

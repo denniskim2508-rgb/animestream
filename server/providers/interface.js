@@ -1,5 +1,5 @@
 // ── Common provider interface ─────────────────────────────────
-// Every reader provider (MangaDex, AsuraScans, MangaPill, AllManga, Kitsu)
+// Every reader provider (MangaDex, ComicK, AsuraScans, MangaPill, AllManga, Kitsu)
 // implements the same contract, so the Provider Manager can route and fall
 // back between them without any provider-specific code:
 //

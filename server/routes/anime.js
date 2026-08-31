@@ -10,6 +10,7 @@ import {
   resolveStream,
   fetchHome,
 } from '../services/animeService.js'
+import { getTMDBEpisodes } from '../services/tmdbService.js'
 
 const router = Router()
 
@@ -72,11 +73,11 @@ router.get('/anidap/recents', async (_req, res) => {
 
 // Takes anilistId + ep + type, finds slug, gets sources, returns m3u8
 router.get('/stream/availability', async (req, res) => {
-  const { anilistId, episode } = req.query
+  const { anilistId, episode, title } = req.query
   if (!anilistId || !episode) {
     return res.status(400).json({ error: 'anilistId and episode are required' })
   }
-  res.json(await checkAvailability(anilistId, episode))
+  res.json(await checkAvailability(anilistId, episode, title))
 })
 
 router.get('/stream/resolve', async (req, res) => {
@@ -112,6 +113,29 @@ router.get('/stream/sources', async (req, res) => {
   } catch (err) {
     console.error('[stream] sources error:', err.message)
     res.status(502).json({ error: 'Failed to fetch sources' })
+  }
+})
+
+// TMDB episode metadata for a detail page (server-only token). `matched:false`
+// is returned when no confident title+year match exists so the client can fall
+// back to its existing numeric episode layout. Token auth happens server-side.
+router.get('/tmdb/episodes', async (req, res) => {
+  const { anilistId, title, year } = req.query
+  if (!anilistId || !title) {
+    return res.status(400).json({ error: 'anilistId and title are required' })
+  }
+  try {
+    const data = await getTMDBEpisodes(Number(anilistId), {
+      title: String(title),
+      year: Number.isFinite(Number(year)) ? Number(year) : undefined,
+    })
+    if (!data) return res.json({ matched: false })
+    res.json({ matched: true, ...data })
+  } catch (err) {
+    // A TMDB outage must never break the detail page: report no match and let
+    // the client fall back gracefully.
+    console.error('[tmdb] episodes error:', err.message)
+    res.json({ matched: false, error: err.message })
   }
 })
 

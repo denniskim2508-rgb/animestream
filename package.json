@@ -12,6 +12,10 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@capacitor/android": "^8.5.0",
+    "@capacitor/core": "^8.5.0",
+    "@capacitor/splash-screen": "^8.0.2",
+    "@capgo/capacitor-video-player": "^8.2.7",
     "@tanstack/react-query": "^5.101.4",
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
@@ -27,6 +31,7 @@
     "react-router-dom": "^7.18.1"
   },
   "devDependencies": {
+    "@capacitor/cli": "^8.5.0",
     "@tailwindcss/vite": "^4.3.3",
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",

@@ -1,9 +1,10 @@
 import { auth } from '../firebase'
+import { API_BASE } from './base'
 
 // Provider-agnostic manga client. The server-side Provider Manager handles
 // all provider routing/fallback and returns normalized shapes, so this module
 // (and the rest of React) never knows which provider served the data.
-const BASE = '/api/manga'
+const BASE = `${API_BASE}/api/manga`
 
 export async function searchManga(query, limit = 20, offset = 0) {
   const res = await fetch(`${BASE}/search?q=${encodeURIComponent(query)}&limit=${limit}&offset=${offset}`)

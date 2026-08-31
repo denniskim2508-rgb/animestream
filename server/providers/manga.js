@@ -10,10 +10,12 @@
 // touching the API layer.
 
 import * as mangadex from './mangadex.js'
+import * as comick from './comick.js'
 import * as allmanga from './allmanga.js'
 import * as asurascans from './asurascans.js'
 import * as mangapill from './mangapill.js'
 import * as atsu from './atsu.js'
+import * as lunarx from './lunarx.js'
 import * as kitsu from './kitsu.js'
 import { normalizeTitle, titleScore } from './util.js'
 import { validPageUrls } from './interface.js'
@@ -23,21 +25,23 @@ import { rememberProvider, rememberedProvider } from './prefs.js'
 // manager can route and fall back between providers uniformly.
 const PROVIDERS = {
   mangadex: mangadex.provider,
+  comick: comick.provider,
   allmanga: allmanga.provider,
   asurascans: asurascans.provider,
   mangapill: mangapill.provider,
   atsu: atsu.provider,
+  lunarx: lunarx.provider,
   kitsu: kitsu.provider,
 }
-const FALLBACK_ORDER = ['mangadex', 'asurascans', 'mangapill', 'atsu', 'allmanga']
-const MERGE_ORDER = ['mangadex', 'asurascans', 'mangapill', 'atsu', 'allmanga']
+const FALLBACK_ORDER = ['mangadex', 'comick', 'asurascans', 'mangapill', 'atsu', 'allmanga', 'lunarx']
+const MERGE_ORDER = ['mangadex', 'comick', 'asurascans', 'mangapill', 'atsu', 'allmanga', 'lunarx']
 
 // Cross-link lookups additionally fall back to Kitsu (metadata only, no reader)
 // as a last resort so obscure titles still surface as manga info.
 const LOOKUP_ORDER = [...FALLBACK_ORDER, 'kitsu']
 
-// `mangadex:<uuid>`, `allmanga:<ref>`, `asurascans:<slug>`, `mangapill:<id>`,
-// `atsu:<mangaId>:<chapterId>`.
+// `mangadex:<uuid>`, `comick:<hid>`, `allmanga:<ref>`, `asurascans:<slug>`,
+// `mangapill:<id>`, `atsu:<mangaId>:<chapterId>`.
 // Bare ids are treated as MangaDex for backwards compatibility with any old
 // links that were stored without a prefix.
 export function splitId(id) {
@@ -474,6 +478,12 @@ async function fallbackPages(chapterId, provider, mangaId, chapterNum) {
         if (cur?.chapter != null) num = cur.chapter
       } catch (err) {
         console.error('[manga] pages fallback: mangadex chapter lookup failed:', err.message)
+      }
+    } else if (provider === 'comick') {
+      try {
+        num = await comick.chapterNumber(splitId(chapterId).ref)
+      } catch (err) {
+        console.error('[manga] pages fallback: comick chapter lookup failed:', err.message)
       }
     } else {
       num = deriveChapterNum(chapterId)

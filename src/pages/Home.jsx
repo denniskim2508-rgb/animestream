@@ -1,26 +1,26 @@
 import { useState, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
+import { Link } from 'react-router-dom'
 import HeroBanner from '../components/ui/HeroBanner'
-import AnimeCarousel from '../components/ui/AnimeCarousel'
+import MediaRow from '../components/ui/MediaRow'
 import ContinueWatchingCard from '../components/ui/ContinueWatchingCard'
-import CommunityComments from '../components/CommunityComments'
 import { SkeletonBanner, SkeletonCarousel } from '../components/ui/Skeleton'
 import { fetchHomepageData, fetchPopularMovies, fetchTopRatedMovies } from '../api/anilist'
 import { fetchRecentEpisodes } from '../api/anikoto'
 import { getAllGenres } from '../data/mockData'
-import { Link } from 'react-router-dom'
-import { Sparkles, History } from 'lucide-react'
+import { Flame, History, Clock3, Trophy, Sparkles, CalendarClock, Film, Star, Clapperboard } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 
 export default function Home() {
   const { user, removeContinueWatching } = useAuth()
   const [cwList, setCwList] = useState([])
 
-  const { data: home, isLoading } = useQuery({
+  const { data: home, isLoading, isError: homeFailed } = useQuery({
     queryKey: ['homepage'],
     queryFn: () => fetchHomepageData(10),
     staleTime: 5 * 60 * 1000,
     gcTime: 30 * 60 * 1000,
+    retry: 1,
   })
 
   const { data: popularMovies } = useQuery({
@@ -60,79 +60,96 @@ export default function Home() {
 
   return (
     <div>
+      {/* Cinematic hero — sits immediately below the top nav, no negative margin */}
       {isLoading ? (
         <SkeletonBanner />
       ) : heroAnime?.length ? (
         <HeroBanner animeList={heroAnime.slice(0, 5)} />
       ) : (
-        <div className="w-full h-[70vh] min-h-[500px] max-h-[800px] bg-gray-900 flex items-center justify-center">
-          <p className="text-gray-500">Unable to load featured anime</p>
+        <div className="w-full h-[500px] bg-kx-surface flex items-center justify-center">
+          <p className="text-white/30">Unable to load featured anime</p>
         </div>
       )}
 
-      <div className="max-w-[1440px] mx-auto space-y-10 sm:space-y-14 -mt-8 relative z-10">
+      {/* Rows — strong separation from hero via dark gradient fade handled inside HeroBanner;
+          content starts 40px below hero with consistent horizontal padding */}
+      <div className="relative z-10 space-y-10 sm:space-y-12 pt-10 pb-4">
+
         {cwList.length > 0 && (
-          <section className="relative group/section">
-            <div className="flex items-center justify-between mb-4 px-4 sm:px-6 lg:px-8">
-              <h2 className="text-lg sm:text-xl font-bold text-white flex items-center gap-2">
-                <History className="w-5 h-5 text-primary-light" /> Continue Watching
+          <section>
+            <div className="flex items-center justify-between mb-4 kx-shell-padding">
+              <h2 className="flex items-center gap-3">
+                <span className="kx-section-accent" />
+                <span className="kx-section-title">Continue Watching</span>
+                <span className="kx-count-badge hidden sm:inline-flex">{cwList.length}</span>
               </h2>
+              <Link to="/history" className="hidden sm:inline-flex items-center gap-1 text-sm font-semibold text-white/35 hover:text-white/65 transition-colors">
+                View all
+              </Link>
             </div>
-            <div className="relative">
-              <div className="flex gap-3 overflow-x-auto scrollbar-hide px-4 sm:px-6 lg:px-8 pb-4">
-                {cwList.slice(0, 10).map((item) => (
-                  <ContinueWatchingCard
-                    key={item.animeId}
-                    item={item}
-                    onRemove={removeContinueWatching}
-                  />
-                ))}
-              </div>
+            <div className="flex overflow-x-auto scrollbar-hide scroll-smooth pb-3 kx-shell-padding" style={{ gap: '16px' }}>
+              {cwList.slice(0, 12).map((item) => (
+                <ContinueWatchingCard key={item.animeId} item={item} onRemove={removeContinueWatching} />
+              ))}
             </div>
           </section>
         )}
 
-        <CommunityComments />
+        {/* Degraded mode: metadata provider down — say why the rows are gone
+            instead of silently showing an empty shell. */}
+        {homeFailed && !home && (
+          <p className="kx-shell-padding text-sm text-white/40">
+            Catalogs are temporarily unavailable — our anime metadata provider is having an outage.
+            Continue Watching and playback still work.
+          </p>
+        )}
 
-        {isLoading ? (
-          <SkeletonCarousel />
-        ) : home?.trending?.length > 0 ? (
-          <section>
-            <AnimeCarousel title="Trending Now" animeList={home.trending} seeAllLink="/browse" />
-          </section>
-        ) : null}
+        {isLoading ? <SkeletonCarousel /> : home?.trending?.length > 0 && (
+          <MediaRow title="Trending Now" icon={Flame} animeList={home.trending} seeAllLink="/browse" />
+        )}
 
         {recentEpisodes.length > 0 && (
-          <section>
-            <AnimeCarousel title="Recent Episodes" animeList={recentEpisodes} seeAllLink="/browse" />
-          </section>
+          <MediaRow title="Latest Episodes" icon={Clock3} animeList={recentEpisodes} seeAllLink="/browse" size="large" />
         )}
 
-        {isLoading ? (
-          <SkeletonCarousel />
-        ) : home?.topRated?.length > 0 ? (
-          <section>
-            <AnimeCarousel title="Top Rated" animeList={home.topRated} seeAllLink="/browse" />
-          </section>
-        ) : null}
+        {isLoading ? <SkeletonCarousel /> : home?.topRated?.length > 0 && (
+          <MediaRow title="Top Rated" icon={Trophy} animeList={home.topRated} seeAllLink="/browse" />
+        )}
 
-        <section className="px-4 sm:px-6 lg:px-8">
-          <h2 className="text-lg sm:text-xl font-bold text-white mb-4 flex items-center gap-2">
-            <Sparkles className="w-5 h-5 text-primary-light" /> Browse by Genre
-          </h2>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+        {isLoading ? <SkeletonCarousel /> : home?.popular?.length > 0 && (
+          <MediaRow title="Most Popular" icon={Sparkles} animeList={home.popular} seeAllLink="/browse" />
+        )}
+
+        {isLoading ? <SkeletonCarousel /> : home?.newReleases?.length > 0 && (
+          <MediaRow title="New Releases" icon={CalendarClock} animeList={home.newReleases} seeAllLink="/browse" />
+        )}
+
+        {popularMovies?.length > 0 && (
+          <MediaRow title="Popular Movies" icon={Film} animeList={popularMovies} seeAllLink="/movies" />
+        )}
+
+        {topRatedMovies?.length > 0 && (
+          <MediaRow title="Top Rated Movies" icon={Star} animeList={topRatedMovies} seeAllLink="/movies" />
+        )}
+
+        {/* Genres strip */}
+        <section>
+          <div className="mb-4 kx-shell-padding">
+            <h2 className="flex items-center gap-3">
+              <span className="kx-section-accent" />
+              <span className="kx-section-title">Browse by Genre</span>
+            </h2>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 kx-shell-padding">
             {genres.map((genre) => (
               <Link
                 key={genre.id}
                 to={`/genres/${genre.id}`}
-                className="group relative overflow-hidden rounded-xl aspect-[3/4] flex items-end transition-all hover:scale-105 hover:shadow-xl"
+                className="group relative overflow-hidden rounded-xl aspect-[3/4] border border-white/[0.06] bg-kx-surface flex items-end hover:border-white/15 transition-colors"
               >
-                <img
-                  src={genre.image}
-                  alt={genre.name}
-                  className="absolute inset-0 w-full h-full object-cover"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+                <img src={genre.image} alt={genre.name} loading="lazy"
+                  className="absolute inset-0 w-full h-full object-cover opacity-70 group-hover:opacity-100 group-hover:scale-105 transition-all duration-500" />
+                <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, rgba(8,13,24,0.92) 0%, rgba(8,13,24,0.30) 45%, transparent 72%)' }} />
                 <span className="relative z-10 w-full text-center text-sm font-bold text-white pb-3 drop-shadow-lg">
                   {genre.name}
                 </span>
@@ -141,49 +158,13 @@ export default function Home() {
           </div>
         </section>
 
-        {isLoading ? (
-          <SkeletonCarousel />
-        ) : home?.popular?.length > 0 ? (
-          <section>
-            <AnimeCarousel title="Most Popular" animeList={home.popular} seeAllLink="/browse" />
-          </section>
-        ) : null}
+        {isLoading ? <SkeletonCarousel /> : home?.recentlyUpdated?.length > 0 && (
+          <MediaRow title="Recently Updated" icon={Clock3} animeList={home.recentlyUpdated} seeAllLink="/browse" />
+        )}
 
-        {isLoading ? (
-          <SkeletonCarousel />
-        ) : home?.recentlyUpdated?.length > 0 ? (
-          <section>
-            <AnimeCarousel title="Recently Updated" animeList={home.recentlyUpdated} seeAllLink="/browse" />
-          </section>
-        ) : null}
-
-        {isLoading ? (
-          <SkeletonCarousel />
-        ) : home?.newReleases?.length > 0 ? (
-          <section>
-            <AnimeCarousel title="New Releases" animeList={home.newReleases} seeAllLink="/browse" />
-          </section>
-        ) : null}
-
-        {popularMovies?.length > 0 ? (
-          <section>
-            <AnimeCarousel title="Popular Movies" animeList={popularMovies} seeAllLink="/browse?format=MOVIE" />
-          </section>
-        ) : null}
-
-        {topRatedMovies?.length > 0 ? (
-          <section>
-            <AnimeCarousel title="Top Rated Movies" animeList={topRatedMovies} seeAllLink="/browse?format=MOVIE" />
-          </section>
-        ) : null}
-
-        {isLoading ? (
-          <SkeletonCarousel />
-        ) : home?.upcoming?.length > 0 ? (
-          <section>
-            <AnimeCarousel title="Top Upcoming" animeList={home.upcoming} seeAllLink="/browse" />
-          </section>
-        ) : null}
+        {isLoading ? <SkeletonCarousel /> : home?.upcoming?.length > 0 && (
+          <MediaRow title="Top Upcoming" icon={CalendarClock} animeList={home.upcoming} seeAllLink="/browse?status=NOT_YET_RELEASED" />
+        )}
       </div>
     </div>
   )

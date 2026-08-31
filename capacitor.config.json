@@ -1,0 +1,25 @@
+{
+  "appId": "com.kaisenx.animetv",
+  "appName": "Kaisen X Anime TV",
+  "webDir": "dist",
+  "android": {
+    "allowMixedContent": false,
+    "captureInput": true,
+    "webContentsDebuggingEnabled": true
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 10000,
+      "launchAutoHide": true,
+      "backgroundColor": "#0C131F",
+      "androidSplashResourceName": "splash",
+      "androidScaleType": "CENTER_CROP",
+      "showSpinner": false,
+      "splashFullScreen": true,
+      "splashImmersive": true
+    }
+  },
+  "server": {
+    "androidScheme": "https"
+  }
+}

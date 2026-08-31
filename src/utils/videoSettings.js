@@ -9,6 +9,7 @@ export const DEFAULT_VIDEO_SETTINGS = {
   autoplay: true,
   playbackRate: 1,
   autoSkip: true,
+  subsDefault: true,
 }
 
 const VALID_KEYS = new Set(Object.keys(DEFAULT_VIDEO_SETTINGS))
