@@ -124,7 +124,7 @@ export default function SearchPage() {
                 to={`/genres/${genre.id}`}
                 className="flex items-center gap-3 p-4 rounded-xl border border-white/5 hover:bg-white/5 transition-all"
               >
-                <span className="text-2xl">{genre.icon}</span>
+                <img src={genre.image} alt="" className="w-10 h-10 rounded-full object-cover shrink-0" />
                 <span className="text-sm font-medium text-white">{genre.name}</span>
               </Link>
             ))}
